@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  nginx:
+    build: ./nginx
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - santa-clara
+
+  santa-clara:
+    build: ./servers/santa-clara
+    environment:
+      - FLASK_ENV=${MCP_ENV:-development}
+    expose:
+      - "8000"
+    restart: unless-stopped
