@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "santa-clara": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "mcp-dev-environment-santa-clara-1",
+        "python",
+        "-u",
+        "/app/server.py"
+      ]
+    }
+  }
+}

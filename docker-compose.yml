@@ -14,8 +14,6 @@ services:
 
   santa-clara:
     build: ./servers/santa-clara
-    environment:
-      - FLASK_ENV=${MCP_ENV:-development}
-    expose:
-      - "8000"
-    restart: unless-stopped
+    stdin_open: true
+    tty: false
+    restart: "no"
