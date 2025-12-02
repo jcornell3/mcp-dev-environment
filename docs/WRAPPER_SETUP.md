@@ -66,7 +66,7 @@ Example configuration for Claude Desktop showing how to register the santa-clara
          "command": "bash",
          "args": [
            "-c",
-           "exec /home/jcornell/mcp-dev-environment/scripts/santa-clara-wrapper.sh"
+           "exec ~/mcp-dev-environment/scripts/santa-clara-wrapper.sh"
          ]
        }
      }
@@ -95,7 +95,7 @@ If you already have a `claude_desktop_config.json`, add this entry to your exist
     "santa-clara-local": {
       "command": "bash",
       "args": [
-        "/home/jcornell/mcp-dev-environment/scripts/santa-clara-wrapper.sh"
+        "~/mcp-dev-environment/scripts/santa-clara-wrapper.sh"
       ]
     }
   }

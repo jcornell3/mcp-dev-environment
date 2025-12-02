@@ -97,7 +97,7 @@ mkcert -cert-file certs/localhost.pem -key-file certs/localhost-key.pem localhos
 
 ### **Issue 4: GitHub Username Guessing**
 
-**Problem:** Copilot guessed GitHub username as "jcornell" (wrong - actual: jcornell3)
+**Problem:** Copilot guessed GitHub username as "USERNAME" (wrong - actual: USERNAME)
 
 **Root Cause:** AI inference without verification
 
@@ -201,9 +201,9 @@ docker compose ps
 
 ### **Issue 4: Config File Location Confusion**
 
-**Problem:** Claude Code created config in WSL filesystem (`/home/jcornell/...`) instead of Windows filesystem
+**Problem:** Claude Code created config in WSL filesystem (`~/...`) instead of Windows filesystem
 
-**Correct Location:** `C:\Users\jcorn\AppData\Roaming\Claude\claude_desktop_config.json`
+**Correct Location:** `C:\Users\USERNAME\AppData\Roaming\Claude\claude_desktop_config.json`
 
 **Solution:** Explicitly specify Windows path, not WSL path
 

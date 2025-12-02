@@ -56,7 +56,7 @@ This might take a while...
 
 **Ubuntu First-Time Setup:**
 1. You'll be prompted: `Create a default Unix user account:`
-2. **Enter username** (e.g., `jcornell`) - use lowercase, no spaces
+2. **Enter username** (e.g., `USERNAME`) - use lowercase, no spaces
 3. **Enter password** (you won't see characters as you type - this is normal)
 4. **Retype password** to confirm
 5. You'll see: `passwd: password updated successfully`
@@ -414,7 +414,7 @@ Once extensions are installed:
 **Verify WSL connection:**
 1. Press `` Ctrl+` `` (backtick) to open terminal
 2. You should see a Linux bash prompt: `username@MACHINE-NAME:~$`
-3. Try: `pwd` - should show `/home/jcornell` or your username
+3. Try: `pwd` - should show `/home/USERNAME` or your username
 
 ✅ **VS Code is now set up with WSL integration!**
 

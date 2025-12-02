@@ -26,7 +26,7 @@ Use this repo to build and test MCP servers locally, integrate with Claude Deskt
 Clone and start the stack:
 
 ```bash
-git clone git@github.com:jcornell3/mcp-dev-environment.git
+git clone git@github.com:USERNAME/mcp-dev-environment.git
 cd mcp-dev-environment
 make start
 ```

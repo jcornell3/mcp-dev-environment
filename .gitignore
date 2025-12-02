@@ -3,19 +3,47 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
+*.egg
 
-# Environment
+# Environment and Secrets
 .env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p12
+*.pfx
 
 # OS
 .DS_Store
+Thumbs.db
+*.swp
+*.swo
 
 # Logs and data
 logs/
 data/
+*.log
 
 # Editor
 .vscode/
+.idea/
+*.swp
+*~
 
 # Docker
 **/venv
+.dockerignore
+
+# IDE
+.project
+.pydevproject
+.settings/
+
+# MacOS
+.AppleDouble
+.LSOverride
+
+# Certificates (local dev only)
+certs/
+!certs/.gitkeep
