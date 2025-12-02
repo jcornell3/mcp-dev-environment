@@ -23,3 +23,9 @@ services:
     stdin_open: true
     tty: false
     restart: "no"
+
+  youtube-transcript:
+    build: ./servers/youtube-transcript
+    stdin_open: true
+    tty: false
+    restart: "no"
