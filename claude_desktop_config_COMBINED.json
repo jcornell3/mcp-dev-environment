@@ -36,6 +36,18 @@
         "/app/server.py"
       ]
     },
+    "youtube-to-mp3-local": {
+      "command": "wsl",
+      "args": [
+        "docker",
+        "exec",
+        "-i",
+        "mcp-dev-environment-youtube-to-mp3-1",
+        "python",
+        "-u",
+        "/app/server.py"
+      ]
+    },
     "santa-clara-cloud": {
       "command": "curl",
       "args": [

@@ -29,3 +29,11 @@ services:
     stdin_open: true
     tty: false
     restart: "no"
+
+  youtube-to-mp3:
+    build: ./servers/youtube-to-mp3
+    stdin_open: true
+    tty: false
+    restart: "no"
+    volumes:
+      - ./downloads:/app/downloads
