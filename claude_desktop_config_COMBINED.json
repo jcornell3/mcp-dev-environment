@@ -24,6 +24,18 @@
         "/app/server.py"
       ]
     },
+    "youtube-transcript-local": {
+      "command": "wsl",
+      "args": [
+        "docker",
+        "exec",
+        "-i",
+        "mcp-dev-environment-youtube-transcript-1",
+        "python",
+        "-u",
+        "/app/server.py"
+      ]
+    },
     "santa-clara-cloud": {
       "command": "curl",
       "args": [
