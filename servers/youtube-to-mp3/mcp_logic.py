@@ -57,35 +57,56 @@ def embed_metadata(mp3_path: str, metadata: dict, video_info: dict):
         # Load or create ID3 tags
         try:
             audio = MP3(mp3_path, ID3=ID3)
-            audio.add_tags()
-        except:
+            if audio.tags is None:
+                audio.add_tags()
+        except Exception as e:
             audio = MP3(mp3_path)
-            audio.add_tags()
+            if audio.tags is None:
+                audio.add_tags()
 
-        # Basic tags
-        audio.tags.add(TIT2(encoding=3, text=metadata['title']))  # Title
-        audio.tags.add(TPE1(encoding=3, text=metadata['artist']))  # Artist
-        audio.tags.add(TALB(encoding=3, text=metadata['album']))   # Album
+        # Basic tags (delete existing to avoid conflicts)
+        for tag in ['TIT2', 'TPE1', 'TALB', 'TDRC']:
+            try:
+                del audio.tags[tag]
+            except KeyError:
+                pass
+
+        audio.tags['TIT2'] = TIT2(encoding=3, text=metadata['title'])  # Title
+        audio.tags['TPE1'] = TPE1(encoding=3, text=metadata['artist'])  # Artist
+        audio.tags['TALB'] = TALB(encoding=3, text=metadata['album'])   # Album
 
         # Date (format: YYYYMMDD -> YYYY)
         if metadata.get('date'):
             year = metadata['date'][:4]
-            audio.tags.add(TDRC(encoding=3, text=year))
+            try:
+                del audio.tags['TDRC']
+            except KeyError:
+                pass
+            audio.tags['TDRC'] = TDRC(encoding=3, text=year)
 
         # Comments (description)
         if metadata.get('description'):
             desc = metadata['description'][:1000]  # Truncate to 1000 chars
-            audio.tags.add(COMM(encoding=3, lang='eng', desc='Description', text=desc))
+            for key in list(audio.tags.keys()):
+                if key.startswith('COMM:') and 'Description' in key:
+                    del audio.tags[key]
+            audio.tags['COMM:Description'] = COMM(encoding=3, lang='eng', desc='Description', text=desc)
 
         # Custom tags - Source URL
-        audio.tags.add(WXXX(encoding=3, desc='Source URL', url=metadata['url']))
+        for key in list(audio.tags.keys()):
+            if key.startswith('WXXX:') and 'Source URL' in key:
+                del audio.tags[key]
+        audio.tags['WXXX:Source URL'] = WXXX(encoding=3, desc='Source URL', url=metadata['url'])
 
         # Additional metadata as comments
         stats = f"Uploader: {metadata.get('uploader', 'Unknown')}\n"
         stats += f"Duration: {metadata.get('duration', 0)}s\n"
         stats += f"Views: {metadata.get('view_count', 'N/A')}\n"
         stats += f"Likes: {metadata.get('like_count', 'N/A')}"
-        audio.tags.add(COMM(encoding=3, lang='eng', desc='YouTube Stats', text=stats))
+        for key in list(audio.tags.keys()):
+            if key.startswith('COMM:') and 'YouTube Stats' in key:
+                del audio.tags[key]
+        audio.tags['COMM:YouTube Stats'] = COMM(encoding=3, lang='eng', desc='YouTube Stats', text=stats)
 
         # Embed thumbnail as album art
         thumbnail_url = video_info.get('thumbnail')
@@ -102,19 +123,21 @@ def embed_metadata(mp3_path: str, metadata: dict, video_info: dict):
                     img.convert('RGB').save(img_byte_arr, format='JPEG', quality=90)
                     img_data = img_byte_arr.getvalue()
 
+                    # Delete existing album art
+                    for key in list(audio.tags.keys()):
+                        if key.startswith('APIC'):
+                            del audio.tags[key]
+
                     # Embed as album art
-                    audio.tags.add(
-                        APIC(
-                            encoding=3,
-                            mime='image/jpeg',
-                            type=3,  # Cover (front)
-                            desc='Album Art',
-                            data=img_data
-                        )
+                    audio.tags['APIC'] = APIC(
+                        encoding=3,
+                        mime='image/jpeg',
+                        type=3,  # Cover (front)
+                        desc='Album Art',
+                        data=img_data
                     )
                     metadata['thumbnail_embedded'] = True
             except Exception as e:
-                print(f"Warning: Could not embed album art: {e}")
                 metadata['thumbnail_embedded'] = False
 
         # Save all tags
@@ -168,8 +191,10 @@ def youtube_to_mp3(
             }],
             'outtmpl': outtmpl,
             'writethumbnail': preserve_metadata,  # Download thumbnail if preserving metadata
-            'quiet': False,
-            'no_warnings': False,
+            'quiet': True,
+            'no_warnings': True,
+            'noprogress': True,
+            'no_color': True,
         }
 
         # Download and convert
