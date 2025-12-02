@@ -17,3 +17,9 @@ services:
     stdin_open: true
     tty: false
     restart: "no"
+
+  math:
+    build: ./servers/math
+    stdin_open: true
+    tty: false
+    restart: "no"
