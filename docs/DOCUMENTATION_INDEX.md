@@ -2,7 +2,7 @@
 
 **Date:** December 1, 2025
 **Status:** Phase 3 Complete - Fully Validated
-**Repository:** https://github.com/USERNAME/mcp-dev-environment  
+**Repository:** https://github.com/jcornell3/mcp-dev-environment  
 
 ---
 
@@ -120,7 +120,7 @@ This document summarizes all documentation created for the MCP development envir
 
 ### **7. README.md** (In Repository)
 **Purpose:** Repository documentation for GitHub  
-**Location:** https://github.com/USERNAME/mcp-dev-environment
+**Location:** https://github.com/jcornell3/mcp-dev-environment
 
 **Contents:**
 - Project description
@@ -308,7 +308,7 @@ echo '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"TOOL_NAME","argum
 4. Check: GitHub Issues on repository
 
 ### **Project Repository**
-- URL: https://github.com/USERNAME/mcp-dev-environment
+- URL: https://github.com/jcornell3/mcp-dev-environment
 - Branch: main
 - Visibility: Private
 

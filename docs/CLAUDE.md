@@ -247,7 +247,7 @@ cd ~/mcp-dev-environment && make start
 ---
 
 ## GitHub Repository
-- **URL:** https://github.com/USERNAME/mcp-dev-environment
+- **URL:** https://github.com/jcornell3/mcp-dev-environment
 - **Branch:** main
 - **Visibility:** Public
 
