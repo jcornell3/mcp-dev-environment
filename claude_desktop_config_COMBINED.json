@@ -1,0 +1,50 @@
+{
+  "mcpServers": {
+    "santa-clara-local": {
+      "command": "wsl",
+      "args": [
+        "docker",
+        "exec",
+        "-i",
+        "mcp-dev-environment-santa-clara-1",
+        "python",
+        "-u",
+        "/app/server.py"
+      ]
+    },
+    "math-local": {
+      "command": "wsl",
+      "args": [
+        "docker",
+        "exec",
+        "-i",
+        "mcp-dev-environment-math-1",
+        "python",
+        "-u",
+        "/app/server.py"
+      ]
+    },
+    "santa-clara-cloud": {
+      "command": "curl",
+      "args": [
+        "-X", "POST",
+        "-s",
+        "-H", "Content-Type: application/json",
+        "-H", "Authorization: Bearer 6c2da9cf361a0d83b0306de7064cbd2fefceda59cdfe51ff300245f2cacf8ca9",
+        "-d", "@-",
+        "https://santa-clara.tamshai.workers.dev"
+      ]
+    },
+    "math-cloud": {
+      "command": "curl",
+      "args": [
+        "-X", "POST",
+        "-s",
+        "-H", "Content-Type: application/json",
+        "-H", "Authorization: Bearer 7dce5a53644f336c48a36bf095ef65c09dcbd4e7363d4771f525e811742d33b3",
+        "-d", "@-",
+        "https://math.tamshai.workers.dev"
+      ]
+    }
+  }
+}
