@@ -1,0 +1,10 @@
+name = "math"
+type = "service"
+main = "src/index.ts"
+compatibility_date = "2024-11-29"
+
+[env.production]
+routes = [
+  { pattern = "math.example.com/*", zone_name = "example.com" }
+]
+vars = { ENVIRONMENT = "production" }

@@ -1,0 +1,10 @@
+name = "santa-clara"
+type = "service"
+main = "src/index.ts"
+compatibility_date = "2024-11-29"
+
+[env.production]
+routes = [
+  { pattern = "santa-clara.example.com/*", zone_name = "example.com" }
+]
+vars = { ENVIRONMENT = "production" }

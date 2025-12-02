@@ -47,3 +47,11 @@ data/
 # Certificates (local dev only)
 certs/
 !certs/.gitkeep
+
+# Cloudflare Workers
+cloudflare-workers/node_modules/
+cloudflare-credentials/
+*.wrangler/
+
+# NPM
+package-lock.json
