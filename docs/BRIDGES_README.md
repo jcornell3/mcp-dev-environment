@@ -2,6 +2,8 @@
 
 This directory contains bridge scripts that enable Claude Desktop to communicate with Cloudflare-hosted MCP servers.
 
+> 📌 **Not sure which bridge to use?** See [BRIDGE_SELECTION.md](BRIDGE_SELECTION.md) for a complete comparison and recommendations.
+
 ## Overview
 
 Since Claude Desktop only supports stdio-based communication, we need bridge scripts that:
@@ -206,3 +208,10 @@ Latest commits:
 4. **Test tools**: Try using math calculator and santa clara property info
 
 All bridges are now fully functional and JSON-RPC 2.0 compliant.
+
+## Related Documentation
+
+- **[BRIDGE_SELECTION.md](BRIDGE_SELECTION.md)** - Choose the right bridge for your use case
+- **[JSON_RPC_2.0_COMPLIANCE.md](JSON_RPC_2.0_COMPLIANCE.md)** - Understand notification handling and empty response fixes
+- **[POWERSHELL_BRIDGE_EMPTY_RESPONSE_FIX.md](POWERSHELL_BRIDGE_EMPTY_RESPONSE_FIX.md)** - Details on critical "Unexpected End of JSON" fix
+- **[FINAL_DEPLOYMENT_STATUS.md](FINAL_DEPLOYMENT_STATUS.md)** - Current deployment verification and status
