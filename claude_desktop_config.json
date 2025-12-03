@@ -10,6 +10,67 @@
         "-u",
         "/app/server.py"
       ]
+    },
+    "math": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "mcp-dev-environment-math-1",
+        "python",
+        "-u",
+        "/app/server.py"
+      ]
+    },
+    "youtube-transcript": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "mcp-dev-environment-youtube-transcript-1",
+        "python",
+        "-u",
+        "/app/server.py"
+      ]
+    },
+    "youtube-to-mp3": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "mcp-dev-environment-youtube-to-mp3-1",
+        "python",
+        "-u",
+        "/app/server.py"
+      ]
+    },
+    "math-cloud": {
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\Users\\jcorn\\mcp-cloud-bridge.ps1",
+        "-Url",
+        "https://math.tamshai.workers.dev",
+        "-AuthToken",
+        "7dce5a53644f336c48a36bf095ef65c09dcbd4e7363d4771f525e811742d33b3"
+      ]
+    },
+    "santa-clara-cloud": {
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\Users\\jcorn\\mcp-cloud-bridge.ps1",
+        "-Url",
+        "https://santa-clara.tamshai.workers.dev",
+        "-AuthToken",
+        "6c2da9cf361a0d83b0306de7064cbd2fefceda59cdfe51ff300245f2cacf8ca9"
+      ]
     }
   }
 }
