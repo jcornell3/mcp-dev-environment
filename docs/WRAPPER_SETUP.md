@@ -1,6 +1,16 @@
-# Santa Clara MCP Wrapper Setup
+# Santa Clara MCP Wrapper Setup (DEPRECATED)
 
-This document describes how to configure Claude Desktop to use the santa-clara MCP server via a stdio wrapper.
+⚠️ **STATUS: DEPRECATED - HTTP Wrapper Approach No Longer Recommended**
+
+This document describes an older HTTP-to-stdio wrapper approach for the santa-clara MCP server. This approach has been superseded by native stdio-based MCP servers using the official MCP Python SDK.
+
+**DO NOT use this wrapper for new implementations.** Instead:
+1. Use the [MCP_SERVER_DEVELOPMENT_GUIDE.md](MCP_SERVER_DEVELOPMENT_GUIDE.md) to create native stdio servers
+2. See [MCP_DEVELOPMENT_LESSONS_LEARNED.md](MCP_DEVELOPMENT_LESSONS_LEARNED.md) for explanation of why the HTTP wrapper approach was abandoned
+
+---
+
+## Historical Information (Deprecated Wrapper Setup)
 
 ## Overview
 

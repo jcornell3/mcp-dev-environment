@@ -16,9 +16,11 @@ Since Claude Desktop only supports stdio-based communication, we need bridge scr
 ### PowerShell Bridge (Windows) - **RECOMMENDED FOR PRODUCTION**
 
 **File**: `mcp-cloud-bridge.ps1`
-**Location on system**: `C:\Users\jcorn\mcp-cloud-bridge.ps1`
+**Location on system**: `C:\Users\{YOUR_USERNAME}\mcp-cloud-bridge.ps1`
 **Language**: PowerShell
 **Platforms**: Windows (WSL or native PowerShell)
+
+> **⚠️ IMPORTANT**: Replace `{YOUR_USERNAME}` with your actual Windows username (e.g., `jcorn`)
 
 **Features**:
 - ✅ Reads JSON-RPC from stdin
@@ -36,7 +38,7 @@ Since Claude Desktop only supports stdio-based communication, we need bridge scr
     "args": [
       "-NoProfile",
       "-ExecutionPolicy", "Bypass",
-      "-File", "C:\\Users\\jcorn\\mcp-cloud-bridge.ps1",
+      "-File", "C:\\Users\\{YOUR_USERNAME}\\mcp-cloud-bridge.ps1",
       "-Url", "https://math.tamshai.workers.dev",
       "-AuthToken", "7dce5a53644f336c48a36bf095ef65c09dcbd4e7363d4771f525e811742d33b3"
     ]
@@ -46,17 +48,17 @@ Since Claude Desktop only supports stdio-based communication, we need bridge scr
     "args": [
       "-NoProfile",
       "-ExecutionPolicy", "Bypass",
-      "-File", "C:\\Users\\jcorn\\mcp-cloud-bridge.ps1",
+      "-File", "C:\\Users\\{YOUR_USERNAME}\\mcp-cloud-bridge.ps1",
       "-Url", "https://santa-clara.tamshai.workers.dev",
-      "-AuthToken": "6c2da9cf361a0d83b0306de7064cbd2fefceda59cdfe51ff300245f2cacf8ca9"
+      "-AuthToken", "6c2da9cf361a0d83b0306de7064cbd2fefceda59cdfe51ff300245f2cacf8ca9"
     ]
   }
 }
 ```
 
 **Log Files**:
-- `C:\Users\jcorn\mcp-cloud-bridge-math.log` - Math worker logs
-- `C:\Users\jcorn\mcp-cloud-bridge-santa-clara.log` - Santa Clara worker logs
+- `C:\Users\{YOUR_USERNAME}\mcp-cloud-bridge-math.log` - Math worker logs
+- `C:\Users\{YOUR_USERNAME}\mcp-cloud-bridge-santa-clara.log` - Santa Clara worker logs
 
 ### Node.js Bridge (Cross-Platform) - **FOR TESTING/DEVELOPMENT**
 
@@ -146,8 +148,10 @@ Both workers are deployed to Cloudflare and configured to:
 ### Test PowerShell Bridge Directly
 ```powershell
 $request = '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}'
-$request | powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Users\jcorn\mcp-cloud-bridge.ps1" -Url "https://math.tamshai.workers.dev" -AuthToken "7dce5a53644f336c48a36bf095ef65c09dcbd4e7363d4771f525e811742d33b3"
+$request | powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Users\{YOUR_USERNAME}\mcp-cloud-bridge.ps1" -Url "https://math.tamshai.workers.dev" -AuthToken "7dce5a53644f336c48a36bf095ef65c09dcbd4e7363d4771f525e811742d33b3"
 ```
+
+> Replace `{YOUR_USERNAME}` with your actual Windows username
 
 ### Test Node.js Bridge Directly
 ```bash

@@ -104,7 +104,7 @@ The cloud servers are configured in `claude_desktop_config.json`:
     "args": [
       "-NoProfile",
       "-ExecutionPolicy", "Bypass",
-      "-File", "C:\\Users\\jcorn\\mcp-cloud-bridge.ps1",
+      "-File", "C:\\Users\\{YOUR_USERNAME}\\mcp-cloud-bridge.ps1",
       "-Url", "https://math.tamshai.workers.dev",
       "-AuthToken", "7dce5a53644f336c48a36bf095ef65c09dcbd4e7363d4771f525e811742d33b3"
     ]
@@ -114,13 +114,15 @@ The cloud servers are configured in `claude_desktop_config.json`:
     "args": [
       "-NoProfile",
       "-ExecutionPolicy", "Bypass",
-      "-File", "C:\\Users\\jcorn\\mcp-cloud-bridge.ps1",
+      "-File", "C:\\Users\\{YOUR_USERNAME}\\mcp-cloud-bridge.ps1",
       "-Url", "https://santa-clara.tamshai.workers.dev",
       "-AuthToken", "6c2da9cf361a0d83b0306de7064cbd2fefceda59cdfe51ff300245f2cacf8ca9"
     ]
   }
 }
 ```
+
+> **Note**: Replace `{YOUR_USERNAME}` with your actual Windows username (e.g., `jcorn`)
 
 ## Git Commits Summary
 

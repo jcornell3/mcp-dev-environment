@@ -1,4 +1,14 @@
-# MCP Development Environment — Setup Complete
+# MCP Development Environment — Setup Complete (OUTDATED)
+
+⚠️ **STATUS: OUTDATED - HTTP/Flask Approach Deprecated**
+
+This document describes the original HTTP-based Flask server approach, which has been replaced with stdio-based MCP Python SDK servers.
+
+**DO NOT use this approach for new implementations.** See [MCP_DEVELOPMENT_LESSONS_LEARNED.md](MCP_DEVELOPMENT_LESSONS_LEARNED.md) for details on why the HTTP approach was abandoned.
+
+---
+
+## Historical Information (Original HTTP Setup)
 
 This repository and local environment have been provisioned and a small MCP (mock control plane) stack is running locally.
 
