@@ -10,17 +10,20 @@ const https = require('https');
 const { spawn } = require('child_process');
 
 const PORT = process.env.PORT || 3000;
-const TARGET_SERVER = process.env.TARGET_SERVER || 'math'; // Can be 'math' or 'santa-clara'
+const TARGET_SERVER = process.env.TARGET_SERVER || 'math'; // Can be 'math', 'santa-clara', 'youtube-transcript', 'youtube-to-mp3'
+
+const SUPPORTED_SERVERS = ['math', 'santa-clara', 'youtube-transcript', 'youtube-to-mp3'];
 
 let serverProcess = null;
+let currentTarget = TARGET_SERVER;
 let connectedClients = new Map(); // Map of clientId -> { res, active }
 let sseBroadcastQueue = []; // Queue of responses to broadcast via SSE
 
 // Start the target MCP server via docker exec
-function startTargetServer() {
-  console.log(`[Bridge] Starting target server: ${TARGET_SERVER}`);
+function startTargetServer(target = currentTarget) {
+  console.log(`[Bridge] Starting target server: ${target}`);
 
-  const containerName = `mcp-dev-environment-${TARGET_SERVER}-1`;
+  const containerName = `mcp-dev-environment-${target}-1`;
   const command = 'docker';
   const args = [
     'exec',
@@ -266,6 +269,62 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Route endpoint - switch target server
+  if (req.url === '/route' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (chunk) => {
+      body += chunk.toString();
+    });
+
+    req.on('end', () => {
+      try {
+        const routeRequest = JSON.parse(body);
+        const targetServer = routeRequest.target || routeRequest.server;
+
+        if (!targetServer) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Missing target or server field' }));
+          return;
+        }
+
+        if (!SUPPORTED_SERVERS.includes(targetServer)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            error: 'Unsupported server',
+            supported: SUPPORTED_SERVERS
+          }));
+          return;
+        }
+
+        // Kill existing server process if running
+        if (serverProcess) {
+          console.log(`[Bridge] Killing existing process for ${currentTarget}`);
+          serverProcess.kill();
+          serverProcess = null;
+        }
+
+        // Switch to new target
+        currentTarget = targetServer;
+        console.log(`[Bridge] Switched to target server: ${currentTarget}`);
+
+        // Start new server
+        startTargetServer(currentTarget);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          status: 'switched',
+          target: currentTarget,
+          supported: SUPPORTED_SERVERS
+        }));
+      } catch (error) {
+        console.error('[Bridge] Route error:', error);
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message }));
+      }
+    });
+    return;
+  }
+
   // 404
   res.writeHead(404);
   res.end('Not found');
@@ -276,10 +335,12 @@ startTargetServer();
 
 server.listen(PORT, () => {
   console.log(`[Bridge] SSE bridge listening on port ${PORT}`);
-  console.log(`[Bridge] Target server: ${TARGET_SERVER}`);
+  console.log(`[Bridge] Initial target server: ${TARGET_SERVER}`);
+  console.log(`[Bridge] Supported servers: ${SUPPORTED_SERVERS.join(', ')}`);
   console.log(`[Bridge] Health: http://localhost:${PORT}/health`);
   console.log(`[Bridge] SSE: http://localhost:${PORT}/sse`);
   console.log(`[Bridge] Messages: http://localhost:${PORT}/messages`);
+  console.log(`[Bridge] Route: POST http://localhost:${PORT}/route (body: {"target":"math|santa-clara|youtube-transcript|youtube-to-mp3"})`);
 });
 
 process.on('SIGTERM', () => {
