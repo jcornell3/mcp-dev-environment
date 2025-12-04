@@ -1,0 +1,110 @@
+# Caddyfile - MCP Development Environment
+# Reverse proxy configuration for Power Strip architecture
+#
+# Architecture:
+#   Public Internet → Caddy (80/443) → Bridge Servers (127.0.0.1:3001-3005) → MCP Servers
+#
+# Security:
+#   - All bridge servers bound to 127.0.0.1 (localhost only)
+#   - Caddy provides single public entry point with HTTPS/auth
+#   - Internal service-to-service communication over Docker network
+
+# ==============================================================================
+# LOCALHOST DEVELOPMENT MODE
+# ==============================================================================
+# For local development, all services available at http://localhost with path-based routing
+
+# Math MCP Server
+http://localhost/math/* {
+    reverse_proxy bridge-math:3000 {
+        uri strip_prefix /math
+    }
+}
+
+# Santa Clara MCP Server
+http://localhost/santa-clara/* {
+    reverse_proxy bridge-santa-clara:3000 {
+        uri strip_prefix /santa-clara
+    }
+}
+
+# YouTube Transcript MCP Server
+http://localhost/youtube-transcript/* {
+    reverse_proxy bridge-youtube-transcript:3000 {
+        uri strip_prefix /youtube-transcript
+    }
+}
+
+# YouTube to MP3 MCP Server
+http://localhost/youtube-to-mp3/* {
+    reverse_proxy bridge-youtube-to-mp3:3000 {
+        uri strip_prefix /youtube-to-mp3
+    }
+}
+
+# GitHub Remote MCP Server
+http://localhost/github-remote/* {
+    reverse_proxy bridge-github-remote:3000 {
+        uri strip_prefix /github-remote
+    }
+}
+
+# Root dashboard (optional - currently shows Caddy admin panel)
+http://localhost {
+    respond "MCP Development Environment - Power Strip Architecture" 200
+}
+
+# ==============================================================================
+# PRODUCTION DEPLOYMENT EXAMPLE
+# ==============================================================================
+#
+# For VPS deployment with subdomains, replace the above with:
+#
+#   math.example.com {
+#       reverse_proxy bridge-math:3000
+#   }
+#
+#   santa-clara.example.com {
+#       reverse_proxy bridge-santa-clara:3000
+#   }
+#
+#   youtube-transcript.example.com {
+#       reverse_proxy bridge-youtube-transcript:3000
+#   }
+#
+#   youtube-to-mp3.example.com {
+#       reverse_proxy bridge-youtube-to-mp3:3000
+#   }
+#
+#   github-remote.example.com {
+#       reverse_proxy bridge-github-remote:3000
+#   }
+#
+# Caddy will automatically:
+#   - Issue Let's Encrypt certificates (HTTPS/TLS)
+#   - Renew certificates automatically
+#   - Redirect HTTP → HTTPS
+#   - Handle ACME challenges
+#
+# Prerequisites for production:
+#   1. Update DNS to point subdomains to VPS IP
+#   2. Open firewall ports 80, 443 on VPS
+#   3. Update docker-compose.yml:
+#      - Remove port bindings for bridge services (3001-3005)
+#      - Or keep them as 127.0.0.1 (recommended for security)
+#   4. Set appropriate environment variables:
+#      - ACME_EMAIL=admin@example.com (for Let's Encrypt)
+#      - Optional: Add basic auth or mTLS for additional security
+#
+# Example with basic auth (uncomment if needed):
+#
+#   math.example.com {
+#       basicauth /* {
+#           admin {$MATH_PASSWORD_HASH}
+#       }
+#       reverse_proxy bridge-math:3000
+#   }
+#
+# Generate password hash: caddy hash-password
+#
+# ==============================================================================

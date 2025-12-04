@@ -56,7 +56,7 @@ services:
   bridge-math:
     build: ./servers/universal-cloud-connector-test
     ports:
-      - "${BRIDGE_MATH_PORT:-3001}:3000"
+      - "127.0.0.1:${BRIDGE_MATH_PORT:-3001}:3000"
     stdin_open: true
     tty: false
     restart: "no"
@@ -73,7 +73,7 @@ services:
   bridge-santa-clara:
     build: ./servers/universal-cloud-connector-test
     ports:
-      - "${BRIDGE_SANTA_CLARA_PORT:-3002}:3000"
+      - "127.0.0.1:${BRIDGE_SANTA_CLARA_PORT:-3002}:3000"
     stdin_open: true
     tty: false
     restart: "no"
@@ -90,7 +90,7 @@ services:
   bridge-youtube-transcript:
     build: ./servers/universal-cloud-connector-test
     ports:
-      - "${BRIDGE_YOUTUBE_TRANSCRIPT_PORT:-3003}:3000"
+      - "127.0.0.1:${BRIDGE_YOUTUBE_TRANSCRIPT_PORT:-3003}:3000"
     stdin_open: true
     tty: false
     restart: "no"
@@ -107,7 +107,7 @@ services:
   bridge-youtube-to-mp3:
     build: ./servers/universal-cloud-connector-test
     ports:
-      - "${BRIDGE_YOUTUBE_TO_MP3_PORT:-3004}:3000"
+      - "127.0.0.1:${BRIDGE_YOUTUBE_TO_MP3_PORT:-3004}:3000"
     stdin_open: true
     tty: false
     restart: "no"
@@ -124,7 +124,7 @@ services:
   bridge-github-remote:
     build: ./servers/universal-cloud-connector-test
     ports:
-      - "${BRIDGE_GITHUB_REMOTE_PORT:-3005}:3000"
+      - "127.0.0.1:${BRIDGE_GITHUB_REMOTE_PORT:-3005}:3000"
     stdin_open: true
     tty: false
     restart: "no"
@@ -137,3 +137,39 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     command: node /app/real-test-bridge.js
+
+  # ============================================================================
+  # CADDY REVERSE PROXY (Ingress Layer - Public 80/443, Internal routing)
+  # ============================================================================
+
+  caddy:
+    image: caddy:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - ACME_AGREE=true
+    restart: unless-stopped
+    depends_on:
+      - bridge-math
+      - bridge-santa-clara
+      - bridge-youtube-transcript
+      - bridge-youtube-to-mp3
+      - bridge-github-remote
+    networks:
+      - mcp-network
+
+networks:
+  mcp-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  caddy_data:
+  caddy_config:
