@@ -190,7 +190,7 @@ def youtube_to_mp3(
                 'preferredquality': bitrate.replace('k', ''),
             }],
             'outtmpl': outtmpl,
-            'writethumbnail': preserve_metadata,  # Download thumbnail if preserving metadata
+            'writethumbnail': False,  # Don't download thumbnail files - we'll fetch and embed the image directly
             'quiet': True,
             'no_warnings': True,
             'noprogress': True,

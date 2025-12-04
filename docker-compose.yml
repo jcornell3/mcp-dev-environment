@@ -35,8 +35,10 @@ services:
     stdin_open: true
     tty: false
     restart: "no"
+    environment:
+      - DOWNLOADS_DIR=/app/downloads
     volumes:
-      - ./downloads:/app/downloads
+      - ${DOWNLOADS_DIR:-/mnt/c/Users/jcorn/Downloads}:/app/downloads
 
   universal-cloud-connector-test:
     build: ./servers/universal-cloud-connector-test

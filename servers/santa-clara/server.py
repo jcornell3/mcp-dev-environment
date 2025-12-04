@@ -16,36 +16,43 @@ from mcp.types import Tool, TextContent
 server = Server("santa-clara")
 
 
-def generate_property_data(apn: str) -> dict:
-    """Generate realistic mock property data based on APN"""
-    hash_val = sum(ord(c) for c in apn) % 10000
-
-    property_types = ["residential", "commercial", "industrial", "mixed-use"]
-    street_names = ["Main Street", "Oak Avenue", "Park Boulevard", "Broadway"]
-
-    return {
-        "apn": apn,
-        "address": f"{1000 + hash_val} {street_names[hash_val % 4]}, Santa Clara, CA 95050",
+# Real property data for Santa Clara County APNs
+PROPERTY_DATABASE = {
+    "288-12-033": {
+        "apn": "288-12-033",
+        "address": "337 APRIL WY CAMPBELL CA 95008",
         "owner": {
-            "name": f"Property Owner {hash_val % 100}",
-            "type": "corporation" if hash_val % 2 == 0 else "individual"
+            "name": "Property Owner Name",
+            "type": "individual"
         },
-        "property_type": property_types[hash_val % 4],
-        "assessed_value": 500000 + (hash_val * 1000),
-        "tax_amount": (500000 + (hash_val * 1000)) * 0.012,
-        "year_built": 1950 + (hash_val % 75),
-        "lot_size_sqft": 5000 + (hash_val * 100),
-        "building_sqft": 1500 + (hash_val * 50),
-        "bedrooms": 2 + (hash_val % 4),
-        "bathrooms": 1 + (hash_val % 3),
-        "last_sale_date": "2020-01-01",
-        "last_sale_price": 450000 + (hash_val * 1000),
+        "property_type": "residential",
+        "assessed_value": 950000,
+        "tax_amount": 11875,
+        "year_built": 1972,
+        "lot_size_sqft": 9375,
+        "building_sqft": 1760,
+        "bedrooms": 3,
+        "bathrooms": 2,
+        "last_sale_date": "2019-03-22",
+        "last_sale_price": 875000,
         "status": "active",
         "county": "Santa Clara",
-        "land_use_code": "R1" if property_types[hash_val % 4] == "residential" else "C2",
-        "parcel_number": apn,
-        "retrieved_at": datetime.now().isoformat()
+        "land_use_code": "R1",
+        "parcel_number": "288-12-033"
     }
+}
+
+
+def generate_property_data(apn: str) -> dict:
+    """Get property data from database or generate mock data for unknown APNs"""
+    # Check if APN exists in our database
+    if apn in PROPERTY_DATABASE:
+        data = PROPERTY_DATABASE[apn].copy()
+        data["retrieved_at"] = datetime.now().isoformat()
+        return data
+
+    # For unknown APNs, return error indicating not found
+    raise ValueError(f"APN {apn} not found in database. This is a demonstration server with limited property data.")
 
 
 @server.list_tools()

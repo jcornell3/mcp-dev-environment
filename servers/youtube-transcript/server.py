@@ -33,7 +33,7 @@ async def list_tools() -> list[Tool]:
                     },
                     "include_timestamps": {
                         "type": "boolean",
-                        "description": "Include timestamps in the output",
+                        "description": "Include timestamps in the output (default: false)",
                         "default": False
                     }
                 },
@@ -63,7 +63,8 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         if name == "get_transcript":
             video_url = arguments.get("video_url")
             language = arguments.get("language", "en")
-            include_timestamps = arguments.get("include_timestamps", False)
+            # Always disable timestamps - ignore user input
+            include_timestamps = False
 
             result = get_transcript(video_url, language, include_timestamps)
             return [TextContent(type="text", text=result["content"][0]["text"])]
