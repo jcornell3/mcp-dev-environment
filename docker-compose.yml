@@ -1,34 +1,33 @@
 version: '3.8'
 
 services:
-  nginx:
-    build: ./nginx
-    ports:
-      - "${HTTP_PORT:-80}:80"
-      - "${HTTPS_PORT:-443}:443"
-    volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./certs:/etc/nginx/certs:ro
-    depends_on:
-      - santa-clara
-
-  santa-clara:
-    build: ./servers/santa-clara
-    stdin_open: true
-    tty: false
-    restart: "no"
+  # ============================================================================
+  # CORE MCP SERVERS (Accessed via HTTP/SSE Bridge layer)
+  # ============================================================================
 
   math:
     build: ./servers/math
     stdin_open: true
     tty: false
     restart: "no"
+    environment:
+      - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
+
+  santa-clara:
+    build: ./servers/santa-clara
+    stdin_open: true
+    tty: false
+    restart: "no"
+    environment:
+      - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
 
   youtube-transcript:
     build: ./servers/youtube-transcript
     stdin_open: true
     tty: false
     restart: "no"
+    environment:
+      - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
 
   youtube-to-mp3:
     build: ./servers/youtube-to-mp3
@@ -37,20 +36,104 @@ services:
     restart: "no"
     environment:
       - DOWNLOADS_DIR=/app/downloads
+      - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
     volumes:
       - ${DOWNLOADS_DIR:-/mnt/c/Users/jcorn/Downloads}:/app/downloads
 
-  universal-cloud-connector-test:
+  # github-remote: (Placeholder - uncomment and build when server exists)
+  #   build: ./servers/github-remote
+  #   stdin_open: true
+  #   tty: false
+  #   restart: "no"
+  #   environment:
+  #     - GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN:-}
+  #     - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
+
+  # ============================================================================
+  # BRIDGE SERVERS (HTTP/SSE - Expose on ports 3001-3005 for Claude Desktop)
+  # ============================================================================
+
+  bridge-math:
     build: ./servers/universal-cloud-connector-test
     ports:
-      - "3000:3000"
+      - "${BRIDGE_MATH_PORT:-3001}:3000"
     stdin_open: true
     tty: false
     restart: "no"
+    depends_on:
+      - math
     environment:
       - PORT=3000
-      - API_TOKEN=test-token-123
+      - API_TOKEN=${BRIDGE_API_TOKEN:-bridge-default-secret}
       - TARGET_SERVER=math
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     command: node /app/real-test-bridge.js
+
+  bridge-santa-clara:
+    build: ./servers/universal-cloud-connector-test
+    ports:
+      - "${BRIDGE_SANTA_CLARA_PORT:-3002}:3000"
+    stdin_open: true
+    tty: false
+    restart: "no"
+    depends_on:
+      - santa-clara
+    environment:
+      - PORT=3000
+      - API_TOKEN=${BRIDGE_API_TOKEN:-bridge-default-secret}
+      - TARGET_SERVER=santa-clara
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: node /app/real-test-bridge.js
+
+  bridge-youtube-transcript:
+    build: ./servers/universal-cloud-connector-test
+    ports:
+      - "${BRIDGE_YOUTUBE_TRANSCRIPT_PORT:-3003}:3000"
+    stdin_open: true
+    tty: false
+    restart: "no"
+    depends_on:
+      - youtube-transcript
+    environment:
+      - PORT=3000
+      - API_TOKEN=${BRIDGE_API_TOKEN:-bridge-default-secret}
+      - TARGET_SERVER=youtube-transcript
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: node /app/real-test-bridge.js
+
+  bridge-youtube-to-mp3:
+    build: ./servers/universal-cloud-connector-test
+    ports:
+      - "${BRIDGE_YOUTUBE_TO_MP3_PORT:-3004}:3000"
+    stdin_open: true
+    tty: false
+    restart: "no"
+    depends_on:
+      - youtube-to-mp3
+    environment:
+      - PORT=3000
+      - API_TOKEN=${BRIDGE_API_TOKEN:-bridge-default-secret}
+      - TARGET_SERVER=youtube-to-mp3
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: node /app/real-test-bridge.js
+
+  # bridge-github-remote: (Uncomment when github-remote server exists)
+  #   build: ./servers/universal-cloud-connector-test
+  #   ports:
+  #     - "${BRIDGE_GITHUB_REMOTE_PORT:-3005}:3000"
+  #   stdin_open: true
+  #   tty: false
+  #   restart: "no"
+  #   depends_on:
+  #     - github-remote
+  #   environment:
+  #     - PORT=3000
+  #     - API_TOKEN=${BRIDGE_API_TOKEN:-bridge-default-secret}
+  #     - TARGET_SERVER=github-remote
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   command: node /app/real-test-bridge.js
