@@ -72,6 +72,23 @@ DOWNLOADS_DIR=/app/downloads
 
 ---
 
+## Architecture Documentation
+
+For detailed analysis of the architectural deviation from the original Universal Cloud Connector design, see:
+
+**📍 [universal-cloud-connector/docs/ARCHITECTURE.md](https://github.com/jcornell3/universal-cloud-connector/blob/master/docs/ARCHITECTURE.md)**
+
+This document includes a new section: **"Deployment Variant: Direct MCP Server Architecture (December 2025)"** that covers:
+- The original UCC bridge-based design (preserved for reference)
+- Current deployment using direct docker-compose exec connections
+- Root cause analysis of why the deviation occurred
+- Trade-offs analysis (simplicity vs universality)
+- Recommendations for future deployments
+
+The architectural decision is documented at the source (UCC repo) rather than duplicated.
+
+---
+
 ## Diagnostic Methodology Used
 
 ### Key Finding: Mount Point Verification
