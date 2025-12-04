@@ -311,6 +311,8 @@ console.log('[GitHub MCP] GitHub Token Status: ' +
 | get_workflow_run_usage | Get Actions usage stats | ✅ Ready |
 | list_workflow_run_artifacts | List workflow artifacts | ✅ Ready |
 
+**Context Optimization Note**: The `create_or_update_file` tool consolidates what would otherwise require separate `create_file` and `update_file` tools. This design choice reduces the number of tool definitions in Claude's system prompt, thereby reducing token count and improving inference performance while maintaining full functionality through intelligent parameter handling (auto-detection of file existence and SHA).
+
 ---
 
 ## 10. Performance Observations
@@ -385,16 +387,26 @@ console.log('[GitHub MCP] GitHub Token Status: ' +
 cd /home/jcornell/mcp-dev-environment
 docker-compose up -d
 
-# Verify github-remote is healthy
+# Verify github-remote is healthy on Host Port 3005
 curl -s http://localhost:3005/health | jq .
 
 # Configure Claude Desktop (already done)
 cat /mnt/c/Users/jcorn/AppData/Roaming/Claude/claude_desktop_config.json
 ```
 
+### Power Strip Architecture Integration
+
+The GitHub Remote MCP server is part of the "Power Strip" multi-MCP architecture, where each server runs in its own Docker container with a dedicated HTTP/SSE bridge. The `github-remote` server exposes its interface on **Host Port 3005** (internal container port 3000 mapped externally), allowing Claude Desktop to access all 12 GitHub tools alongside 4 other MCP servers:
+
+- **Port 3001**: math MCP server
+- **Port 3002**: santa-clara MCP server
+- **Port 3003**: youtube-transcript MCP server
+- **Port 3004**: youtube-to-mp3 MCP server
+- **Port 3005**: github-remote MCP server ← *New*
+
 ### Using in Claude Desktop
 
-Claude Desktop can now access all 12 GitHub tools through the `github-remote-bridge` MCP server alongside 4 other MCP servers (math, santa-clara, youtube-transcript, youtube-to-mp3).
+Claude Desktop can now access all 12 GitHub tools through the `github-remote-bridge` MCP server on Host Port 3005, operating alongside 4 other MCP servers in the Power Strip architecture.
 
 ---
 
