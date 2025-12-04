@@ -188,11 +188,10 @@ const server = http.createServer(async (req, res) => {
     // Send initial connection message
     res.write(`data: ${JSON.stringify({ status: 'connected', timestamp: new Date().toISOString(), connectedClients: connectedClients.size })}\n\n`);
 
-    // Send any queued messages
-    while (sseBroadcastQueue.length > 0) {
-      const queuedMessage = sseBroadcastQueue.shift();
-      res.write(`data: ${JSON.stringify(queuedMessage)}\n\n`);
-      console.log(`[Bridge] Sent queued message to ${clientId}`);
+    // Clear any stale queued messages from previous sessions (new client = new session)
+    if (sseBroadcastQueue.length > 0) {
+      console.log(`[Bridge] Clearing ${sseBroadcastQueue.length} stale queued messages for new client`);
+      sseBroadcastQueue = [];
     }
 
     // Handle client disconnect

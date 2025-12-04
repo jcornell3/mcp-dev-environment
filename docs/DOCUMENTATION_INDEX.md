@@ -2,7 +2,7 @@
 
 **Date:** December 4, 2025
 **Status:** Complete with 29 Documentation Files (All Categories)
-**Repository:** https://github.com/jcornell3/mcp-dev-environment  
+**Repository:** https://github.com/jcornell3/mcp-dev-environment
 
 ---
 
