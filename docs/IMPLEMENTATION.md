@@ -1,4 +1,4 @@
-# Universal Cloud Connector Implementation Summary
+# Universal Cloud Connector Bridge: Implementation & Integration
 
 ## What Was Built
 
