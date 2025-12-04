@@ -1,1 +1,1 @@
-Test file!
+This is a test file created by Claude Code MCP server demonstration on 2025-12-04.
