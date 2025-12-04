@@ -37,3 +37,18 @@ services:
     restart: "no"
     volumes:
       - ./downloads:/app/downloads
+
+  universal-cloud-connector-test:
+    build: ./servers/universal-cloud-connector-test
+    ports:
+      - "3000:3000"
+    stdin_open: true
+    tty: false
+    restart: "no"
+    environment:
+      - PORT=3000
+      - API_TOKEN=test-token-123
+      - TARGET_SERVER=math
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: node /app/real-test-bridge.js
