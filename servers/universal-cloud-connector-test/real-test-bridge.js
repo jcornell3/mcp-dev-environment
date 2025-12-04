@@ -25,17 +25,33 @@ function startTargetServer(target = currentTarget) {
 
   const containerName = `mcp-dev-environment-${target}-1`;
   const command = 'docker';
-  const args = [
-    'exec',
-    '-i',
-    containerName,
-    'python',
-    '-u',
-    '/app/server.py'
-  ];
+
+  // Detect server type and build appropriate command
+  const isNodeServer = ['github-remote'].includes(target);
+  const args = isNodeServer
+    ? [
+        'exec',
+        '-i',
+        containerName,
+        'node',
+        '/app/dist/index.js'
+      ]
+    : [
+        'exec',
+        '-i',
+        containerName,
+        'python',
+        '-u',
+        '/app/server.py'
+      ];
 
   serverProcess = spawn(command, args, {
-    stdio: ['pipe', 'pipe', 'pipe']
+    stdio: ['pipe', 'pipe', 'pipe'],
+    shell: false
+  });
+
+  serverProcess.on('error', (error) => {
+    console.error(`[Bridge] Failed to start target server: ${error.message}`);
   });
 
   serverProcess.stderr.on('data', (data) => {
@@ -45,7 +61,8 @@ function startTargetServer(target = currentTarget) {
   serverProcess.on('exit', (code) => {
     console.log(`[Bridge] Target server exited with code ${code}`);
     serverProcess = null;
-    startTargetServer(); // Restart on exit
+    // Restart after 1 second delay
+    setTimeout(() => startTargetServer(), 1000);
   });
 
   // Send initialize message immediately

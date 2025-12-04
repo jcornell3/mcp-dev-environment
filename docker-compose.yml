@@ -40,14 +40,14 @@ services:
     volumes:
       - ${DOWNLOADS_DIR:-/mnt/c/Users/jcorn/Downloads}:/app/downloads
 
-  # github-remote: (Placeholder - uncomment and build when server exists)
-  #   build: ./servers/github-remote
-  #   stdin_open: true
-  #   tty: false
-  #   restart: "no"
-  #   environment:
-  #     - GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN:-}
-  #     - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
+  github-remote:
+    build: ./servers/github-remote
+    stdin_open: true
+    tty: false
+    restart: "no"
+    environment:
+      - GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN:-}
+      - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
 
   # ============================================================================
   # BRIDGE SERVERS (HTTP/SSE - Expose on ports 3001-3005 for Claude Desktop)
@@ -121,19 +121,19 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     command: node /app/real-test-bridge.js
 
-  # bridge-github-remote: (Uncomment when github-remote server exists)
-  #   build: ./servers/universal-cloud-connector-test
-  #   ports:
-  #     - "${BRIDGE_GITHUB_REMOTE_PORT:-3005}:3000"
-  #   stdin_open: true
-  #   tty: false
-  #   restart: "no"
-  #   depends_on:
-  #     - github-remote
-  #   environment:
-  #     - PORT=3000
-  #     - API_TOKEN=${BRIDGE_API_TOKEN:-bridge-default-secret}
-  #     - TARGET_SERVER=github-remote
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock
-  #   command: node /app/real-test-bridge.js
+  bridge-github-remote:
+    build: ./servers/universal-cloud-connector-test
+    ports:
+      - "${BRIDGE_GITHUB_REMOTE_PORT:-3005}:3000"
+    stdin_open: true
+    tty: false
+    restart: "no"
+    depends_on:
+      - github-remote
+    environment:
+      - PORT=3000
+      - API_TOKEN=${BRIDGE_API_TOKEN:-bridge-default-secret}
+      - TARGET_SERVER=github-remote
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: node /app/real-test-bridge.js
