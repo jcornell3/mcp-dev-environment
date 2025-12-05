@@ -18,4 +18,7 @@ RUN chmod +x server.py
 
 RUN mkdir -p /app/downloads
 
+# Expose port 3000 for HTTP/SSE
+EXPOSE 3000
+
 CMD ["python", "-u", "server.py"]

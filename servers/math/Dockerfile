@@ -9,5 +9,8 @@ COPY server.py .
 # Make server executable
 RUN chmod +x server.py
 
-# Run as stdio server (not HTTP server)
+# Expose port 3000 for HTTP/SSE
+EXPOSE 3000
+
+# Run as HTTP server with FastAPI
 CMD ["python", "-u", "server.py"]

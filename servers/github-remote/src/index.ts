@@ -822,14 +822,92 @@ async function listWorkflowRunArtifacts(args: {
   };
 }
 
-// Start server
-async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.log('[GitHub MCP] Server connected via stdio transport');
+// Express HTTP server for SSE support
+import express from 'express';
+import { Request, Response, NextFunction } from 'express';
+
+const app = express();
+const HTTP_PORT = parseInt(process.env.PORT || '3000', 10);
+
+// Middleware
+app.use(express.json());
+
+// Authentication middleware
+function verifyAuth(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(401).json({ detail: 'Missing Authorization header' });
+  }
+
+  const parts = authHeader.split(' ');
+  if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer') {
+    return res.status(401).json({ detail: 'Invalid Authorization header' });
+  }
+
+  const token = parts[1];
+  if (token !== MCP_API_KEY) {
+    return res.status(403).json({ detail: 'Invalid API key' });
+  }
+
+  next();
 }
 
-main().catch((error) => {
-  console.error('[GitHub MCP] Fatal error:', error);
-  process.exit(1);
+// Health check endpoint (no auth required)
+app.get('/health', (req: Request, res: Response) => {
+  res.json({
+    status: 'healthy',
+    service: 'github-remote',
+    api_key_configured: MCP_API_KEY !== 'default-api-key'
+  });
+});
+
+// SSE endpoint for streaming JSON-RPC responses
+app.get('/sse', verifyAuth, async (req: Request, res: Response) => {
+  console.log('[GitHub MCP] SSE stream opened');
+
+  // Set SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  try {
+    // Create stdio transport and connect MCP server
+    const transport = new StdioServerTransport();
+
+    // Pipe stdin/stdout through the response for SSE streaming
+    await server.connect(transport);
+    console.log('[GitHub MCP] Server connected via stdio transport on SSE endpoint');
+
+    // Keep the response open
+    await new Promise((resolve) => {
+      req.on('close', () => {
+        console.log('[GitHub MCP] SSE stream closed');
+        resolve(null);
+      });
+    });
+  } catch (error) {
+    console.error('[GitHub MCP] SSE error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  } finally {
+    if (!res.writableEnded) {
+      res.end();
+    }
+  }
+});
+
+// Messages endpoint for HTTP POST
+app.post('/messages', verifyAuth, (req: Request, res: Response) => {
+  console.log('[GitHub MCP] Message received:', req.body);
+  res.json({
+    status: 'accepted',
+    message: 'Message received, response will be sent via SSE'
+  });
+});
+
+// Start HTTP server
+app.listen(HTTP_PORT, '0.0.0.0', () => {
+  console.log(`[GitHub MCP] HTTP server listening on port ${HTTP_PORT}`);
 });

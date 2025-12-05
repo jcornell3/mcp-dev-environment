@@ -16,36 +16,41 @@
 
 # Math MCP Server
 http://localhost/math/* {
-    reverse_proxy bridge-math:3000 {
-        uri strip_prefix /math
+    handle {
+        rewrite /math* {path}
+        reverse_proxy bridge-math:3000
     }
 }
 
 # Santa Clara MCP Server
 http://localhost/santa-clara/* {
-    reverse_proxy bridge-santa-clara:3000 {
-        uri strip_prefix /santa-clara
+    handle {
+        rewrite /santa-clara* {path}
+        reverse_proxy bridge-santa-clara:3000
     }
 }
 
 # YouTube Transcript MCP Server
 http://localhost/youtube-transcript/* {
-    reverse_proxy bridge-youtube-transcript:3000 {
-        uri strip_prefix /youtube-transcript
+    handle {
+        rewrite /youtube-transcript* {path}
+        reverse_proxy bridge-youtube-transcript:3000
     }
 }
 
 # YouTube to MP3 MCP Server
 http://localhost/youtube-to-mp3/* {
-    reverse_proxy bridge-youtube-to-mp3:3000 {
-        uri strip_prefix /youtube-to-mp3
+    handle {
+        rewrite /youtube-to-mp3* {path}
+        reverse_proxy bridge-youtube-to-mp3:3000
     }
 }
 
 # GitHub Remote MCP Server
 http://localhost/github-remote/* {
-    reverse_proxy bridge-github-remote:3000 {
-        uri strip_prefix /github-remote
+    handle {
+        rewrite /github-remote* {path}
+        reverse_proxy bridge-github-remote:3000
     }
 }
 

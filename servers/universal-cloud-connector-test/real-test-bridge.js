@@ -58,8 +58,11 @@ function startTargetServer(target = currentTarget) {
     console.error(`[Target Server Error] ${data}`);
   });
 
-  serverProcess.on('exit', (code) => {
-    console.log(`[Bridge] Target server exited with code ${code}`);
+  // Log when process spawns
+  console.log(`[Bridge] Target server process spawned, PID: ${serverProcess.pid}`);
+
+  serverProcess.on('exit', (code, signal) => {
+    console.log(`[Bridge] Target server exited with code ${code}, signal ${signal}`);
     serverProcess = null;
     // Restart after 1 second delay
     setTimeout(() => startTargetServer(), 1000);
@@ -96,7 +99,12 @@ function forwardToTargetServer(request) {
     }
 
     let buffer = '';
+    let resolved = false;
+
     const responseHandler = (data) => {
+      // Prevent double responses
+      if (resolved) return;
+
       buffer += data.toString();
       const lines = buffer.split('\n');
 
@@ -109,6 +117,8 @@ function forwardToTargetServer(request) {
             const response = JSON.parse(line);
             // Match responses by id if available, otherwise take first response
             if (response.id === request.id || !request.id) {
+              // Mark as resolved BEFORE removing listener to prevent race conditions
+              resolved = true;
               serverProcess.stdout.removeListener('data', responseHandler);
               resolve(response);
               return;
@@ -126,8 +136,11 @@ function forwardToTargetServer(request) {
 
     // Send request to target server
     try {
-      serverProcess.stdin.write(JSON.stringify(request) + '\n');
+      const requestStr = JSON.stringify(request) + '\n';
+      console.log(`[Bridge] Writing request id ${request.id} to stdin`);
+      serverProcess.stdin.write(requestStr);
     } catch (error) {
+      resolved = true;
       serverProcess.stdout.removeListener('data', responseHandler);
       reject(new Error(`Failed to write to stdin: ${error.message}`));
       return;
@@ -135,15 +148,21 @@ function forwardToTargetServer(request) {
 
     // Timeout after 10 seconds
     const timeoutId = setTimeout(() => {
-      serverProcess.stdout.removeListener('data', responseHandler);
-      reject(new Error('Target server timeout'));
+      if (!resolved) {
+        resolved = true;
+        serverProcess.stdout.removeListener('data', responseHandler);
+        reject(new Error('Target server timeout (10s)'));
+      }
     }, 10000);
 
     // Clean up timeout if we resolve
     const originalResolve = resolve;
     resolve = (value) => {
-      clearTimeout(timeoutId);
-      originalResolve(value);
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timeoutId);
+        originalResolve(value);
+      }
     };
   });
 }
@@ -204,12 +223,19 @@ const server = http.createServer(async (req, res) => {
       console.log(`[Bridge] SSE client disconnected: ${clientId} (total: ${connectedClients.size})`);
     });
 
-    // Keep connection alive
+    // Keep connection alive - send keepalive more frequently
     const keepalive = setInterval(() => {
-      if (!res.writableEnded) {
-        res.write(': keepalive\n\n');
+      if (!res.writableEnded && res.writable) {
+        try {
+          res.write(': keepalive\n\n');
+        } catch (error) {
+          console.error(`[Bridge] Failed to send keepalive: ${error.message}`);
+          clearInterval(keepalive);
+        }
+      } else {
+        clearInterval(keepalive);
       }
-    }, 30000);
+    }, 20000); // Send keepalive every 20 seconds instead of 30
 
     res.on('close', () => {
       clearInterval(keepalive);
@@ -221,11 +247,12 @@ const server = http.createServer(async (req, res) => {
   // Helper function to broadcast responses via SSE
   function broadcastViaSSE(message) {
     let sent = false;
+    console.log(`[Bridge] Broadcasting to ${connectedClients.size} connected clients for message id: ${message.id}`);
     for (const [clientId, client] of connectedClients.entries()) {
       if (client.active && !client.res.writableEnded) {
         try {
           client.res.write(`data: ${JSON.stringify(message)}\n\n`);
-          console.log(`[Bridge] Sent response via SSE to client ${clientId}`);
+          console.log(`[Bridge] Sent response via SSE to client ${clientId} (id: ${message.id})`);
           sent = true;
         } catch (error) {
           console.error(`[Bridge] Failed to send to client ${clientId}: ${error.message}`);

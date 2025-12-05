@@ -1,16 +1,28 @@
 #!/usr/bin/env python3
 """
 Santa Clara Property Tax MCP Server
-Uses MCP Python SDK with stdio transport for Claude Desktop integration
+Uses MCP Python SDK with native HTTP support via FastAPI
 """
 
 import asyncio
 import sys
+import os
+import logging
 from datetime import datetime
 from mcp.server import Server
-from mcp.server.stdio import stdio_server
+from mcp.server.sse import SseServerTransport
 from mcp.types import Tool, TextContent
+from fastapi import FastAPI, Request, Header, HTTPException
+from fastapi.responses import Response
+import uvicorn
 
+# Setup logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='[santa-clara-mcp] %(asctime)s - %(levelname)s - %(message)s',
+    stream=sys.stderr
+)
+log = logging.getLogger(__name__)
 
 # Initialize MCP server
 server = Server("santa-clara")
@@ -109,19 +121,85 @@ Building Size: {data['building_sqft']:,} sqft"""
         raise ValueError(f"Unknown tool: {name}")
 
 
-async def main():
-    """Run the MCP server using stdio transport"""
-    try:
-        async with stdio_server() as (read_stream, write_stream):
-            await server.run(
-                read_stream,
-                write_stream,
-                server.create_initialization_options()
-            )
-    except Exception as e:
-        print(f"Server error: {e}", file=sys.stderr)
-        sys.exit(1)
+# FastAPI app
+app = FastAPI(title="Math MCP Server")
+
+# Get API key from environment
+MCP_API_KEY = os.environ.get("MCP_API_KEY", "default-api-key")
+
+
+# Authentication middleware for SSE endpoints
+async def verify_auth_header(request: Request) -> str:
+    """Verify authorization header and return token"""
+    auth_header = request.headers.get("authorization", "")
+
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+
+    parts = auth_header.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise HTTPException(status_code=401, detail="Invalid Authorization header")
+
+    token = parts[1]
+    if token != MCP_API_KEY:
+        raise HTTPException(status_code=403, detail="Invalid API key")
+
+    return token
+
+
+# Create a new SSE transport for each connection
+def create_sse_transport():
+    """Create a new SSE transport instance"""
+    return SseServerTransport(endpoint="/messages")
+
+
+# SSE endpoint - handles WebSocket-like SSE stream (also accept /sse/)
+@app.get("/sse")
+@app.get("/sse/")
+async def sse_stream(request: Request):
+    """Server-Sent Events endpoint for MCP protocol"""
+    await verify_auth_header(request)
+
+    # Create transport for SSE communication
+    transport = SseServerTransport(endpoint="/messages")
+
+    # connect_sse is an async context manager, use it as such
+    async with transport.connect_sse(
+        request.scope,
+        request.receive,
+        request._send
+    ) as sse:
+        await sse
+
+
+# Messages endpoint - handles POST messages from client (also accept /messages/)
+@app.post("/messages")
+@app.post("/messages/")
+async def messages_handler(request: Request):
+    """Messages endpoint for MCP protocol"""
+    await verify_auth_header(request)
+
+    # Create transport for message handling
+    transport = create_sse_transport()
+
+    # Handle posted message
+    return await transport.handle_post_message(
+        request.scope,
+        request.receive,
+        request._send
+    )
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "service": "santa-clara",
+        "api_key_configured": MCP_API_KEY != "default-api-key"
+    }
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    port = int(os.environ.get("PORT", 3000))
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")

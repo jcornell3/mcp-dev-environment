@@ -15,5 +15,8 @@ COPY src ./src
 # Build TypeScript
 RUN npm run build
 
+# Expose port 3000 for HTTP/SSE
+EXPOSE 3000
+
 # Run the server
 CMD ["npm", "start"]

@@ -6,22 +6,27 @@ Downloads YouTube videos and converts to MP3 with metadata preservation
 
 import asyncio
 import sys
+import os
 import logging
 from mcp.server import Server
-from mcp.server.stdio import stdio_server
+from mcp.server.sse import SseServerTransport
 from mcp.types import Tool, TextContent
 from mcp_logic import youtube_to_mp3
+from fastapi import FastAPI, Request, Header, HTTPException
+from fastapi.responses import Response
+import uvicorn
 
 # Set up logging to stderr for debugging
 logging.basicConfig(
     level=logging.DEBUG,
-    format='[youtube-to-mp3] %(asctime)s - %(levelname)s - %(message)s',
+    format='[youtube-to-mp3-mcp] %(asctime)s - %(levelname)s - %(message)s',
     stream=sys.stderr
 )
+log = logging.getLogger(__name__)
 
-app = Server("youtube-to-mp3")
+mcp_app = Server("youtube-to-mp3")
 
-@app.list_tools()
+@mcp_app.list_tools()
 async def list_tools() -> list[Tool]:
     """List available tools"""
     return [
@@ -57,7 +62,7 @@ async def list_tools() -> list[Tool]:
         )
     ]
 
-@app.call_tool()
+@mcp_app.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     """Execute a tool"""
     try:
@@ -107,14 +112,85 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         error_msg += "- Try a different video to test\n"
         raise ValueError(error_msg)
 
-async def main():
-    """Run the MCP server"""
-    async with stdio_server() as (read_stream, write_stream):
-        await app.run(
-            read_stream,
-            write_stream,
-            app.create_initialization_options()
-        )
+# FastAPI app
+app = FastAPI(title="Math MCP Server")
+
+# Get API key from environment
+MCP_API_KEY = os.environ.get("MCP_API_KEY", "default-api-key")
+
+
+# Authentication middleware for SSE endpoints
+async def verify_auth_header(request: Request) -> str:
+    """Verify authorization header and return token"""
+    auth_header = request.headers.get("authorization", "")
+
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+
+    parts = auth_header.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise HTTPException(status_code=401, detail="Invalid Authorization header")
+
+    token = parts[1]
+    if token != MCP_API_KEY:
+        raise HTTPException(status_code=403, detail="Invalid API key")
+
+    return token
+
+
+# Create a new SSE transport for each connection
+def create_sse_transport():
+    """Create a new SSE transport instance"""
+    return SseServerTransport(endpoint="/messages")
+
+
+# SSE endpoint - handles WebSocket-like SSE stream (also accept /sse/)
+@app.get("/sse")
+@app.get("/sse/")
+async def sse_stream(request: Request):
+    """Server-Sent Events endpoint for MCP protocol"""
+    await verify_auth_header(request)
+
+    # Create transport for SSE communication
+    transport = SseServerTransport(endpoint="/messages")
+
+    # connect_sse is an async context manager, use it as such
+    async with transport.connect_sse(
+        request.scope,
+        request.receive,
+        request._send
+    ) as sse:
+        await sse
+
+
+# Messages endpoint - handles POST messages from client (also accept /messages/)
+@app.post("/messages")
+@app.post("/messages/")
+async def messages_handler(request: Request):
+    """Messages endpoint for MCP protocol"""
+    await verify_auth_header(request)
+
+    # Create transport for SSE communication
+    transport = SseServerTransport(endpoint="/messages")
+
+    # Handle posted message
+    return await transport.handle_post_message(
+        request.scope,
+        request.receive,
+        request._send
+    )
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "service": "youtube-to-mp3",
+        "api_key_configured": MCP_API_KEY != "default-api-key"
+    }
+
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    port = int(os.environ.get("PORT", 3000))
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
