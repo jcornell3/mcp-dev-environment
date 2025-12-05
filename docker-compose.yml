@@ -44,15 +44,6 @@ services:
       - ${DOWNLOADS_DIR:-/mnt/c/Users/jcorn/Downloads}:/app/downloads
     restart: unless-stopped
 
-  github-remote:
-    build: ./servers/github-remote
-    ports:
-      - "127.0.0.1:3005:3000"
-    environment:
-      - GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN:-}
-      - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
-      - PORT=3000
-    restart: unless-stopped
 
 networks:
   default:
