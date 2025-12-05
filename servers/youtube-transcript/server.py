@@ -100,6 +100,10 @@ app = FastAPI(title="Math MCP Server")
 # Get API key from environment
 MCP_API_KEY = os.environ.get("MCP_API_KEY", "default-api-key")
 
+# Global SSE transport instance - shared across /sse and /messages endpoints
+# This maintains session state and correlates SSE streams with POST messages
+sse_transport = SseServerTransport(endpoint="/messages")
+
 
 # Authentication middleware for SSE endpoints
 async def verify_auth_header(request: Request) -> str:
@@ -133,11 +137,8 @@ async def sse_stream(request: Request):
     """Server-Sent Events endpoint for MCP protocol"""
     await verify_auth_header(request)
 
-    # Create transport for SSE communication
-    transport = SseServerTransport(endpoint="/messages")
-
-    # connect_sse is an async context manager, use it as such
-    async with transport.connect_sse(
+    # Use global transport instance to maintain session state
+    async with sse_transport.connect_sse(
         request.scope,
         request.receive,
         request._send
@@ -152,11 +153,8 @@ async def messages_handler(request: Request):
     """Messages endpoint for MCP protocol"""
     await verify_auth_header(request)
 
-    # Create transport for SSE communication
-    transport = SseServerTransport(endpoint="/messages")
-
-    # Handle posted message
-    return await transport.handle_post_message(
+    # Use global transport instance to correlate with SSE stream
+    return await sse_transport.handle_post_message(
         request.scope,
         request.receive,
         request._send
