@@ -205,8 +205,13 @@ async def sse_stream(request: Request):
         request.scope,
         request.receive,
         request._send
-    ) as sse:
-        await sse
+    ) as (read_stream, write_stream):
+        # MCP server handles the streams through the transport
+        await server.run(
+            read_stream,
+            write_stream,
+            server.create_initialization_options()
+        )
 
 
 # Messages endpoint - handles POST messages from client (also accept /messages/)
