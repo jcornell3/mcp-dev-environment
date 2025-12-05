@@ -16,6 +16,7 @@ from mcp.server.sse import SseServerTransport
 from mcp.types import Tool, TextContent
 from fastapi import FastAPI, Request, Header, HTTPException
 from fastapi.responses import Response
+from fastapi.routing import Mount
 import uvicorn
 
 # Setup logging
@@ -206,7 +207,7 @@ async def sse_stream(request: Request):
         request.receive,
         request._send
     ) as (read_stream, write_stream):
-        # MCP server handles the streams through the transport
+        # Run MCP server with the transport streams
         await server.run(
             read_stream,
             write_stream,
@@ -214,19 +215,13 @@ async def sse_stream(request: Request):
         )
 
 
-# Messages endpoint - handles POST messages from client (also accept /messages/)
-@app.post("/messages")
-@app.post("/messages/")
-async def messages_handler(request: Request):
-    """Messages endpoint for MCP protocol"""
-    await verify_auth_header(request)
+# Messages endpoint - mount the SSE transport handler directly
+# The transport maintains session correlation for POST requests to /messages
+async def messages_endpoint(scope, receive, send):
+    """Messages endpoint that delegates to SSE transport"""
+    await sse_transport.handle_post_message(scope, receive, send)
 
-    # Use global transport instance to correlate with SSE stream
-    return await sse_transport.handle_post_message(
-        request.scope,
-        request.receive,
-        request._send
-    )
+app.routes.append(Mount("/messages", app=messages_endpoint))
 
 
 @app.get("/health")
