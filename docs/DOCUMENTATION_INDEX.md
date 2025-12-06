@@ -13,6 +13,7 @@ This index provides quick access to all current documentation. Deprecated files 
 1. [README.md](README.md) - Project overview
 2. [SETUP_GUIDE.md](SETUP_GUIDE.md) - Complete setup instructions
 3. [CLAUDE_DESKTOP_SETUP.md](CLAUDE_DESKTOP_SETUP.md) - Claude Desktop configuration
+4. [VPS_MIGRATION_PLAN.md](VPS_MIGRATION_PLAN.md) - Migrate to VPS (5.78.159.29)
 
 ### 🔧 Troubleshooting
 1. [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Comprehensive troubleshooting guide
@@ -37,6 +38,7 @@ This index provides quick access to all current documentation. Deprecated files 
 |----------|-------------|--------|
 | [SETUP_GUIDE.md](SETUP_GUIDE.md) | Complete environment setup | ✅ Current |
 | [CLAUDE_DESKTOP_SETUP.md](CLAUDE_DESKTOP_SETUP.md) | Claude Desktop configuration | ✅ Current |
+| [VPS_MIGRATION_PLAN.md](VPS_MIGRATION_PLAN.md) | Migrate servers to VPS | ✅ Current |
 | [FRESH_WORKSTATION_SETUP.md](FRESH_WORKSTATION_SETUP.md) | Setup on new machine | ✅ Current |
 | [ADDITIVE_DOCKER_SETUP.md](ADDITIVE_DOCKER_SETUP.md) | Adding new Docker services | ✅ Current |
 | [WRAPPER_SETUP.md](WRAPPER_SETUP.md) | MCP server wrapper setup | ✅ Current |
