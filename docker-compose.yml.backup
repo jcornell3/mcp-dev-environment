@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # ============================================================================
+  # CORE MCP SERVERS (Now with Native HTTP/SSE Support)
+  # ============================================================================
+
+  math:
+    build: ./servers/math
+    ports:
+      - "127.0.0.1:3001:3000"
+    environment:
+      - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
+      - PORT=3000
+    restart: unless-stopped
+
+  santa-clara:
+    build: ./servers/santa-clara
+    ports:
+      - "127.0.0.1:3002:3000"
+    environment:
+      - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
+      - PORT=3000
+    restart: unless-stopped
+
+  youtube-transcript:
+    build: ./servers/youtube-transcript
+    ports:
+      - "127.0.0.1:3003:3000"
+    environment:
+      - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
+      - PORT=3000
+    restart: unless-stopped
+
+  youtube-to-mp3:
+    build: ./servers/youtube-to-mp3
+    ports:
+      - "127.0.0.1:3004:3000"
+    environment:
+      - DOWNLOADS_DIR=/app/downloads
+      - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
+      - PORT=3000
+    volumes:
+      - ${DOWNLOADS_DIR:-/mnt/c/Users/jcorn/Downloads}:/app/downloads
+    restart: unless-stopped
+
+  github-remote:
+    build: ./servers/github-remote
+    ports:
+      - "127.0.0.1:3005:3000"
+    environment:
+      - GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN:-}
+      - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
+      - PORT=3000
+    restart: unless-stopped
+
+networks:
+  default:
+    driver: bridge

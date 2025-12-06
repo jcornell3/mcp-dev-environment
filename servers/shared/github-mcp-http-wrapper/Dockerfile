@@ -3,8 +3,10 @@ FROM node:24-slim
 # Install GitHub MCP server binary
 RUN apt-get update && \
     apt-get install -y curl && \
-    curl -L https://github.com/github/github-mcp-server/releases/download/v0.24.0/github-mcp-server-linux-amd64 -o /usr/local/bin/github-mcp-server && \
+    curl -L https://github.com/github/github-mcp-server/releases/download/v0.24.0/github-mcp-server_Linux_x86_64.tar.gz -o /tmp/github-mcp-server.tar.gz && \
+    tar -xzf /tmp/github-mcp-server.tar.gz -C /usr/local/bin/ && \
     chmod +x /usr/local/bin/github-mcp-server && \
+    rm /tmp/github-mcp-server.tar.gz && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
