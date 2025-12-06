@@ -168,6 +168,46 @@ This is the primary supported platform. Follow the standard setup above.
 - Run `docker` and `make` commands in WSL terminal
 - Claude Desktop connects via `wsl docker exec` (already configured)
 
+#### WSL Path Mapping (Important!)
+
+File paths differ between Windows and WSL - this is a common source of confusion:
+
+| Location | Windows Path | WSL Path |
+|----------|--------------|----------|
+| Windows C: drive | `C:\Users\jcorn\...` | `/mnt/c/Users/jcorn/...` |
+| WSL home directory | `\\wsl$\Ubuntu\home\jcornell\` | `/home/jcornell/` |
+| This repository (WSL) | `\\wsl$\Ubuntu\home\jcornell\mcp-dev-environment\` | `~/mcp-dev-environment/` |
+
+**Accessing WSL files from Windows:**
+- File Explorer: Type `\\wsl$\Ubuntu\` in address bar
+- Or: Navigate to "Linux" in left sidebar → Ubuntu → home → your-username
+
+**Accessing Windows files from WSL:**
+- Windows C: drive is mounted at `/mnt/c/`
+- Example: `C:\Users\jcorn\Documents\` = `/mnt/c/Users/jcorn/Documents/`
+
+**For Claude Desktop Configuration:**
+- ✅ **Always use WSL paths** in config (`/home/jcornell/...`)
+- ❌ **Never use Windows paths** in config (`C:\...`)
+- The `wsl` command handles path translation automatically
+
+**For VS Code:**
+1. Open WSL terminal: `wsl`
+2. Navigate to project: `cd ~/mcp-dev-environment`
+3. Open in VS Code: `code .`
+4. VS Code will show "WSL: Ubuntu" in bottom-left corner
+
+**Common Mistake:**
+```json
+// ❌ WRONG - Windows path won't work in WSL
+"command": "wsl",
+"args": ["bash", "-c", "cd C:\\Users\\jcorn\\universal-cloud-connector && ..."]
+
+// ✅ CORRECT - WSL path
+"command": "wsl",
+"args": ["bash", "-c", "cd /home/jcornell/universal-cloud-connector && ..."]
+```
+
 ### macOS
 
 Claude Desktop configuration differs on macOS:

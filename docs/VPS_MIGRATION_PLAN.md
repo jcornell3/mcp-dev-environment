@@ -78,25 +78,46 @@ ports:
 - youtube-to-mp3 (port 3004)
 - github-mcp (port 3005)
 
-### 3. Environment Variables
+### 3. Environment Variables & API Tokens
 
 **File**: `.env` (create on VPS)
 
+⚠️ **SECURITY CRITICAL:** Never use `default-api-key` in production!
+
+**Generate secure API tokens** (run these commands):
+```bash
+# Generate MCP_API_KEY (for server authentication)
+openssl rand -hex 32
+
+# Generate BRIDGE_API_TOKEN (for bridge authentication)
+openssl rand -hex 32
+
+# Save these tokens - you'll need them for both VPS and local config
+```
+
+**Create .env file on VPS**:
 ```env
 MCP_ENV=production
-MCP_API_KEY=<generate-secure-token>
-BRIDGE_API_TOKEN=<generate-another-token>
+
+# API KEYS - Use the tokens generated above (NOT default-api-key!)
+MCP_API_KEY=<paste-first-generated-token-here>
+BRIDGE_API_TOKEN=<paste-second-generated-token-here>
+
+# Domain Configuration
 DOMAIN=5.78.159.29
 HTTP_PORT=80
 HTTPS_PORT=443
+
+# Storage
 DOWNLOADS_DIR=/data/downloads
-GITHUB_PERSONAL_ACCESS_TOKEN=<your-token>
+
+# GitHub Token (if using github-mcp server)
+GITHUB_PERSONAL_ACCESS_TOKEN=<your-existing-github-token>
 ```
 
-**Generate secure tokens**:
-```bash
-openssl rand -hex 32
-```
+**IMPORTANT**: The same `MCP_API_KEY` must be used in:
+1. VPS `.env` file (above)
+2. Local Claude Desktop config (`api_token` parameter)
 
 ### 4. Volume Mounts (youtube-to-mp3)
 
@@ -223,6 +244,85 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | \
 - Math: "What is 123 + 456?"
 - Santa Clara: "Look up property 288-13-033"
 - YouTube: "Get transcript of <url>"
+
+---
+
+## VPS Security
+
+### Port Binding Strategy
+
+**Local Development (Current)**:
+```yaml
+ports:
+  - "127.0.0.1:3001:3000"  # Secure: localhost only
+```
+Protects from local network access - services only accessible from same machine.
+
+**VPS Deployment (This Migration)**:
+```yaml
+ports:
+  - "0.0.0.0:3001:3000"  # Required: external access needed
+```
+Binds to all interfaces - **required** for remote access from your Windows machine.
+
+### Security Layers
+
+**1. Firewall (ufw)**
+- Only ports 80, 443 exposed to internet
+- Ports 3001-3005 accessible only from your IP (optional restriction)
+
+**2. Bearer Token Authentication**
+- All requests require `Authorization: Bearer <token>` header
+- Strong tokens (32-byte hex = 64 characters)
+- Tokens never logged or stored in databases
+
+**3. HTTPS with Caddy (Immediate)**
+- Automatic Let's Encrypt certificates
+- HTTPS encryption for all traffic
+- HTTP automatically redirects to HTTPS
+
+**4. Optional: Basic Auth in Caddy**
+- Additional authentication layer at reverse proxy
+- Username/password before reaching MCP servers
+
+### VPS Security Checklist
+
+Before going live, verify:
+
+- [ ] Firewall configured (`sudo ufw status`)
+- [ ] Only ports 80, 443 exposed to internet
+- [ ] Ports 3001-3005 **NOT** directly accessible from internet
+- [ ] HTTPS enabled with Let's Encrypt (Caddy handles this)
+- [ ] Strong API tokens generated (not `default-api-key`)
+- [ ] `.env` file has restrictive permissions (`chmod 600 .env`)
+- [ ] Regular security updates scheduled (`apt update && apt upgrade`)
+- [ ] No sensitive data in git repositories
+- [ ] Docker socket access restricted (only sudoers)
+
+### Network Diagram with Security
+
+```
+Internet
+    ↓
+Firewall (ufw) - ports 80, 443 only
+    ↓
+Caddy Reverse Proxy
+  ├─ HTTPS/TLS (Let's Encrypt)
+  ├─ Optional: Basic Auth
+  ├─ Rate limiting (optional)
+  └─ Request logging
+    ↓
+Docker Internal Network
+  ├─ math-mcp:3001 (Bearer token auth)
+  ├─ santa-clara-mcp:3002 (Bearer token auth)
+  └─ youtube-transcript-mcp:3003 (Bearer token auth)
+```
+
+Ports 3001-3005 are bound to `0.0.0.0` but **protected by**:
+1. Firewall blocks direct access
+2. Only accessible via Caddy reverse proxy
+3. Caddy enforces HTTPS
+4. Servers enforce Bearer token auth
 
 ---
 
