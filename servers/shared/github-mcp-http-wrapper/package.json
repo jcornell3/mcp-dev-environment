@@ -1,0 +1,13 @@
+{
+  "name": "github-mcp-http-wrapper",
+  "version": "1.0.0",
+  "description": "HTTP/SSE wrapper for GitHub MCP Server stdio mode",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["mcp", "github", "http", "sse"],
+  "author": "Claude Code",
+  "license": "MIT",
+  "dependencies": {}
+}
