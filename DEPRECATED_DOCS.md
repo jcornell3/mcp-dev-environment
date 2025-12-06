@@ -78,12 +78,50 @@ Location: `/home/jcornell/universal-cloud-connector/`
 
 **Superseded by**: [docs/ISSUES_AND_FIXES_CONSOLIDATED.md](../mcp-dev-environment/docs/ISSUES_AND_FIXES_CONSOLIDATED.md)
 
-**Deprecated Root Directory Files**:
-- ❌ CURRENT_STATUS.md
-- ❌ DIAGNOSIS.md
-- ❌ FIX_VERIFIED.md
-- ❌ GITHUB_BRIDGE_FIXED.md
-- ❌ CLAUDE_DESKTOP_TOOLS_ISSUE.md
+**Deprecated Root Directory Files** (Archived Dec 6, 2025):
+- ❌ CURRENT_STATUS.md → `docs/archive/`
+- ❌ DIAGNOSIS.md → `docs/archive/`
+- ❌ FIX_VERIFIED.md → `docs/archive/`
+- ❌ GITHUB_BRIDGE_FIXED.md → `docs/archive/`
+- ❌ CLAUDE_DESKTOP_TOOLS_ISSUE.md → `docs/archive/`
+- ❌ INDEX.md → `docs/archive/` (outdated index, superseded by README.md)
+
+**Deprecated Docs Files** (Archived Dec 6, 2025):
+- ❌ docs/QUICK_START.md → `docs/archive/` (referenced legacy .mcpb bundling format)
+- ❌ docs/PROJECT_STRUCTURE.md → `docs/archive/` (documented obsolete .mcpb packaging)
+
+**Current Architecture**: Direct Node.js execution (`npm run build` → `dist/index.js`)
+
+---
+
+## Legacy Infrastructure (Archived Dec 6, 2025)
+
+### Nginx Configuration (Replaced by Caddy)
+
+**Location**: `docs/archive/legacy-nginx/`
+
+**Reason**: Caddy is now the standard reverse proxy. Nginx was used in earlier experiments but Caddy provides:
+- Automatic Let's Encrypt certificate management
+- Simpler configuration
+- Built-in HTTP/2 and modern TLS
+
+**Archived Files**:
+- ❌ nginx/Dockerfile → `docs/archive/legacy-nginx/`
+- ❌ nginx/nginx.conf → `docs/archive/legacy-nginx/`
+- ❌ nginx/conf.d/mcp-servers.conf → `docs/archive/legacy-nginx/`
+
+**Current Standard**: Caddy (see `Caddyfile` lines 63-115 for production template)
+
+### PowerShell Script (WSL Required)
+
+**Location**: `docs/archive/legacy-powershell/`
+
+**Reason**: WSL is required for stdio communication. Supporting multiple entry points (WSL + PowerShell) doubles testing surface and introduces stdio encoding issues.
+
+**Archived Files**:
+- ❌ mcp-cloud-bridge.ps1 → `docs/archive/legacy-powershell/`
+
+**Current Standard**: WSL only (see docs/SETUP_GUIDE.md for WSL path mapping)
 
 ---
 
