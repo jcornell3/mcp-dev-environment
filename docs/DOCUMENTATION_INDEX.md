@@ -1,449 +1,277 @@
-# MCP Development Environment - Documentation Summary
+# MCP Development Environment - Documentation Index
 
-**Date:** December 4, 2025
-**Status:** Complete with 29 Documentation Files (All Categories)
-**Repository:** https://github.com/jcornell3/mcp-dev-environment
+**Last Updated**: December 6, 2025
+**Status**: Current and Maintained ✅
 
----
-
-## Overview
-
-This document summarizes all documentation created for the MCP development environment project. Use this as a navigation guide to find the information you need.
+This index provides quick access to all current documentation. Deprecated files are listed separately.
 
 ---
 
-## Documentation Files (29 Total)
+## Quick Links
+
+### 🚀 Getting Started
+1. [README.md](README.md) - Project overview
+2. [SETUP_GUIDE.md](SETUP_GUIDE.md) - Complete setup instructions
+3. [CLAUDE_DESKTOP_SETUP.md](CLAUDE_DESKTOP_SETUP.md) - Claude Desktop configuration
+
+### 🔧 Troubleshooting
+1. [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Comprehensive troubleshooting guide
+2. [ISSUES_AND_FIXES_CONSOLIDATED.md](ISSUES_AND_FIXES_CONSOLIDATED.md) - All known issues and fixes
+
+### 📚 Learning
+1. [LESSONS_LEARNED_CONSOLIDATED.md](LESSONS_LEARNED_CONSOLIDATED.md) - Development insights and best practices
+2. [MCP_SERVER_DEVELOPMENT_GUIDE.md](MCP_SERVER_DEVELOPMENT_GUIDE.md) - Building MCP servers
+
+### 🏗️ Architecture
+1. [Universal Cloud Connector Architecture](../../universal-cloud-connector/docs/ARCHITECTURE.md)
+2. [BRIDGE_SELECTION.md](BRIDGE_SELECTION.md) - Choosing the right bridge approach
+3. [JSON_RPC_2.0_COMPLIANCE.md](JSON_RPC_2.0_COMPLIANCE.md) - Protocol compliance
 
 ---
 
-### **🔧 Setup & Installation (4 files)**
+## Documentation by Category
 
-#### **1. FRESH_WORKSTATION_SETUP.md** ⭐ START HERE
-**Purpose:** Complete setup guide from fresh Windows machine to working MCP environment
-**Key Topics:** WSL2 setup, Claude-driven workflow, environment initialization
-**Who needs this:** Anyone setting up the environment for the first time
+### Setup and Installation
 
-#### **2. CLAUDE_DESKTOP_SETUP.md**
-**Purpose:** Claude Desktop MCP configuration for local (Docker) and cloud (Cloudflare) servers
-**Key Topics:** Local vs cloud servers, configuration setup, platform-specific paths
-**Who needs this:** Anyone integrating Claude Desktop with MCP servers
+| Document | Description | Status |
+|----------|-------------|--------|
+| [SETUP_GUIDE.md](SETUP_GUIDE.md) | Complete environment setup | ✅ Current |
+| [CLAUDE_DESKTOP_SETUP.md](CLAUDE_DESKTOP_SETUP.md) | Claude Desktop configuration | ✅ Current |
+| [FRESH_WORKSTATION_SETUP.md](FRESH_WORKSTATION_SETUP.md) | Setup on new machine | ✅ Current |
+| [ADDITIVE_DOCKER_SETUP.md](ADDITIVE_DOCKER_SETUP.md) | Adding new Docker services | ✅ Current |
+| [WRAPPER_SETUP.md](WRAPPER_SETUP.md) | MCP server wrapper setup | ✅ Current |
 
-#### **3. SETUP_GUIDE.md**
-**Purpose:** Customizing environment for your setup (paths, container names, GitHub URLs)
-**Key Topics:** Configuration customization, path updates, environment variables
-**Who needs this:** Anyone needing to adapt the setup to their specific environment
+### Troubleshooting and Issues
 
-#### **4. SETUP_COMPLETE.md**
-**Purpose:** Generated after initial setup - quick reference and first-time usage guide
-**Key Topics:** Architecture overview, management commands, testing, next steps
-**Who needs this:** Reference after completing initial setup
+| Document | Description | Status |
+|----------|-------------|--------|
+| [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Main troubleshooting guide | ✅ Current |
+| [ISSUES_AND_FIXES_CONSOLIDATED.md](ISSUES_AND_FIXES_CONSOLIDATED.md) | All issues and fixes | ✅ Current |
+| [../DEPRECATED_DOCS.md](../DEPRECATED_DOCS.md) | List of deprecated issue docs | ✅ Current |
 
----
+### Architecture and Design
 
-### **🏗️ Architecture & Design (5 files)**
+| Document | Description | Status |
+|----------|-------------|--------|
+| [../../universal-cloud-connector/docs/ARCHITECTURE.md](../../universal-cloud-connector/docs/ARCHITECTURE.md) | Bridge architecture | ✅ Current |
+| [UNIVERSAL_CLOUD_CONNECTOR_BRIDGE.md](UNIVERSAL_CLOUD_CONNECTOR_BRIDGE.md) | Bridge overview | ✅ Current |
+| [BRIDGE_SELECTION.md](BRIDGE_SELECTION.md) | Bridge selection guide | ✅ Current |
+| [JSON_RPC_2.0_COMPLIANCE.md](JSON_RPC_2.0_COMPLIANCE.md) | Protocol compliance | ✅ Current |
+| [MCP_DEV_ENVIRONMENT_SUMMARY.md](MCP_DEV_ENVIRONMENT_SUMMARY.md) | Environment overview | ✅ Current |
 
-#### **5. ADDITIVE_DOCKER_SETUP.md**
-**Purpose:** The "Power Strip" architecture - running all 5 MCP servers simultaneously
-**Key Topics:** Port offset strategy, Docker Compose patterns, simultaneous execution
-**Who needs this:** Understanding the multi-server architecture
+### Development Guides
 
-#### **6. POWER_STRIP_QUICK_REFERENCE.md**
-**Purpose:** Quick reference for port allocation and Docker Compose structure
-**Key Topics:** Port registry (3001-3005), service mapping, Claude Desktop config pattern
-**Who needs this:** Quick lookup of running services and their ports
+| Document | Description | Status |
+|----------|-------------|--------|
+| [MCP_SERVER_DEVELOPMENT_GUIDE.md](MCP_SERVER_DEVELOPMENT_GUIDE.md) | Building MCP servers | ✅ Current |
+| [LESSONS_LEARNED_CONSOLIDATED.md](LESSONS_LEARNED_CONSOLIDATED.md) | Best practices and insights | ✅ Current |
+| [DOCKER_SECURITY_AND_CADDY.md](DOCKER_SECURITY_AND_CADDY.md) | Docker and reverse proxy | ✅ Current |
 
-#### **7. CLAUDE.md**
-**Purpose:** Active configuration reference - currently running environment details
-**Key Topics:** Docker containers, port usage, network configuration, management
-**Who needs this:** Understanding what's currently running and how to manage it
+### Operational Documentation
 
-#### **8. MCP_DEV_ENVIRONMENT_SUMMARY.md**
-**Purpose:** Quick reference for active configuration (ports, containers, resources)
-**Key Topics:** Container listing, port allocation, network config, management commands
-**Who needs this:** Anyone working on multiple projects simultaneously
+| Document | Description | Status |
+|----------|-------------|--------|
+| [OPERATIONAL_NOTES.md](OPERATIONAL_NOTES.md) | Day-to-day operations | ✅ Current |
+| [POWER_STRIP_QUICK_REFERENCE.md](POWER_STRIP_QUICK_REFERENCE.md) | Quick reference commands | ✅ Current |
 
-#### **9. UNIVERSAL_CLOUD_CONNECTOR_BRIDGE.md**
-**Purpose:** Bidirectional bridge implementation for Claude Desktop - HTTP/SSE patterns
-**Key Topics:** Request-response ID matching, SSE communication, bridge architecture
-**Who needs this:** Understanding how bridges work and building custom bridges
+### Server-Specific Documentation
 
----
+| Document | Description | Status |
+|----------|-------------|--------|
+| [YOUTUBE_TRANSCRIPT_USAGE.md](YOUTUBE_TRANSCRIPT_USAGE.md) | YouTube transcript server | ✅ Current |
+| [YOUTUBE_TRANSCRIPT_DEVELOPMENT_NOTES.md](YOUTUBE_TRANSCRIPT_DEVELOPMENT_NOTES.md) | Development notes | ✅ Current |
+| [YOUTUBE_TO_MP3_DEVELOPMENT_NOTES.md](YOUTUBE_TO_MP3_DEVELOPMENT_NOTES.md) | YouTube to MP3 notes | ✅ Current |
 
-### **📚 Development Guides (2 files)**
+### Miscellaneous
 
-#### **10. MCP_SERVER_DEVELOPMENT_GUIDE.md** ⭐ BUILDING SERVERS
-**Purpose:** How to create new MCP servers using the Python SDK
-**Key Topics:** Quick start, MCP anatomy, tool definition, testing, deployment
-**Who needs this:** Anyone building new Python MCP servers
-
-#### **11. GITHUB_REMOTE_LESSONS_LEARNED.md** ⭐ NODE.JS SERVER EXAMPLE
-**Purpose:** Complete implementation guide for GitHub Remote MCP server (Node.js/TypeScript)
-**Key Topics:** Node.js architecture, Octokit integration, 12 GitHub tools, port 3005
-**Who needs this:** Anyone building Node.js MCP servers or extending the power strip
+| Document | Description | Status |
+|----------|-------------|--------|
+| [CLAUDE.md](CLAUDE.md) | Claude-specific notes | ℹ️ Reference |
+| [DOCUMENTATION_UPDATES_PHASE2.md](DOCUMENTATION_UPDATES_PHASE2.md) | Documentation updates | ℹ️ Reference |
+| [BRIDGES_README.md](BRIDGES_README.md) | Bridges overview | ✅ Current |
 
 ---
 
-### **📖 Reference & Operations (3 files)**
+## Universal Cloud Connector Documentation
 
-#### **12. README.md** (In Repository)
-**Purpose:** Repository documentation for GitHub
-**Key Topics:** Project structure, quick start, stdio transport, Claude Desktop setup
-**Who needs this:** Anyone viewing the GitHub repository
+The bridge component has its own documentation in `/home/jcornell/universal-cloud-connector/docs/`:
 
-#### **13. OPERATIONAL_NOTES.md**
-**Purpose:** Multi-server deployment operations and daily maintenance
-**Key Topics:** Daily operations, health checks, maintenance procedures
-**Who needs this:** Running and maintaining the Power Strip architecture
-
-#### **14. JSON_RPC_2.0_COMPLIANCE.md**
-**Purpose:** JSON-RPC 2.0 protocol compliance for MCP
-**Key Topics:** Request types, notification handling, response formats
-**Who needs this:** Implementing bridges or working with protocol details
+| Document | Description |
+|----------|-------------|
+| [README.md](../../universal-cloud-connector/README.md) | Bridge overview and quick start |
+| [ARCHITECTURE.md](../../universal-cloud-connector/docs/ARCHITECTURE.md) | Complete technical architecture |
+| [BUILD.md](../../universal-cloud-connector/docs/BUILD.md) | Build instructions |
+| [DEPLOYMENT.md](../../universal-cloud-connector/docs/DEPLOYMENT.md) | Deployment guide |
+| [QUICK_START.md](../../universal-cloud-connector/docs/QUICK_START.md) | Getting started |
+| [LESSONS_LEARNED.md](../../universal-cloud-connector/docs/LESSONS_LEARNED.md) | Bridge-specific lessons |
+| [PROJECT_STRUCTURE.md](../../universal-cloud-connector/docs/PROJECT_STRUCTURE.md) | Code organization |
+| [FINAL_CHECKLIST.md](../../universal-cloud-connector/docs/FINAL_CHECKLIST.md) | Pre-deployment checklist |
 
 ---
 
-### **🔧 Bridge Implementation (3 files)**
+## Deprecated Documentation
 
-#### **15. BRIDGES_README.md**
-**Purpose:** Overview of MCP bridges for Cloudflare Workers and local deployment
-**Key Topics:** PowerShell bridge, Node.js bridge, stdio-to-HTTP conversion
-**Who needs this:** Understanding bridge options and deployment strategies
+The following documents are **no longer maintained** and have been consolidated:
 
-#### **16. BRIDGE_SELECTION.md**
-**Purpose:** Decision guide for choosing the right bridge for your use case
-**Key Topics:** Decision matrix, bridge comparison, production recommendations
-**Who needs this:** Deciding which bridge to use for your deployment
+### Superseded by ISSUES_AND_FIXES_CONSOLIDATED.md
+- BRIDGE_FIX_SUMMARY.md
+- CADDY_ISSUE_FIXED.md
+- CLAUDE_DESKTOP_FIX_REPORT.md
+- COMPLETE_FIX_SUMMARY.md
+- CRITICAL_FINDING.md
+- DEBUG_LOGGING_TEST.md
+- DOCKER_REBUILD_COMPLETE.md
+- DUPLICATE_MESSAGE_FIX.md
+- FINAL_DIAGNOSIS_AND_FIX.md
+- FINAL_FIXES_SUMMARY.md
+- FIXES_APPLIED.md
+- MCP-SERVER-SESSION-CORRELATION-FIXES.md
+- ROOT_CAUSE_ANALYSIS.md
+- ROOT_CAUSE_ANALYSIS_FINAL.md
+- ROOT_CAUSE_FOUND_AND_FIXED.md
+- SESSION_ID_PARAMETER_FIX.md
+- TEST-RESULTS-MCP-PROTOCOL-COMPLIANCE.md
 
-#### **17. WRAPPER_SETUP.md** (Deprecated)
-**Purpose:** Historical documentation of the HTTP wrapper approach (no longer recommended)
-**Key Topics:** Legacy bash wrapper, deprecated methods, historical context
-**Who needs this:** Historical reference only - use modern bridges instead
+### Superseded by LESSONS_LEARNED_CONSOLIDATED.md
+- CLOUDFLARE_SSE_BRIDGE_LESSONS_LEARNED.md
+- YOUTUBE_TO_MP3_LESSONS_LEARNED.md
+- GITHUB_REMOTE_LESSONS_LEARNED.md
+- MCP_DEVELOPMENT_LESSONS_LEARNED.md
 
----
+### Status Documents (Outdated)
+- DEPLOYMENT_READY.md
+- READY_FOR_TESTING.md
+- SYSTEM_READY_FOR_TESTING.md
+- FINAL_DEPLOYMENT_STATUS.md
+- IMPLEMENTATION_COMPLETE.md
+- SETUP_COMPLETE.md
 
-### **🎓 Lessons Learned (7 files)**
-
-#### **18. MCP_DEVELOPMENT_LESSONS_LEARNED.md** ⭐ CRITICAL LESSONS
-**Purpose:** All issues encountered and solutions during development
-**Key Topics:** HTTP vs stdio fundamental difference, protocol version, do's & don'ts
-**Who needs this:** Anyone hitting issues during setup or troubleshooting
-
-#### **19. CLOUDFLARE_SSE_BRIDGE_LESSONS_LEARNED.md**
-**Purpose:** Cloudflare Workers SSE bridge - architectural incompatibility discovery
-**Key Topics:** SSE protocol limitations, 30-second timeout, architectural pivots
-**Who needs this:** Understanding why certain architectures don't work
-
-#### **20. YOUTUBE_TO_MP3_LESSONS_LEARNED.md**
-**Purpose:** YouTube to MP3 MCP Server - mount point and file sync lessons
-**Key Topics:** Docker volume configuration, mount point mismatch, file resolution
-**Who needs this:** Building file-handling MCP servers
-
-#### **21. YOUTUBE_TO_MP3_DEVELOPMENT_NOTES.md**
-**Purpose:** Development journey for YouTube to MP3 server - technical challenges
-**Key Topics:** Stdout pollution, ID3 metadata, yt-dlp integration
-**Who needs this:** Building audio processing MCP servers
-
-#### **22. YOUTUBE_TRANSCRIPT_DEVELOPMENT_NOTES.md**
-**Purpose:** YouTube Transcript server development - API integration challenges
-**Key Topics:** YouTubeTranscriptApi updates, library instantiation, version changes
-**Who needs this:** Building transcript extraction MCP servers
-
-#### **23. YOUTUBE_TRANSCRIPT_USAGE.md**
-**Purpose:** How to use the YouTube Transcript MCP server
-**Key Topics:** get_transcript tool usage, parameters, example commands
-**Who needs this:** Using the YouTube Transcript MCP server in Claude Desktop
-
-#### **24. MCP_SERVER_FIXES_SESSION_SUMMARY.md**
-**Purpose:** Docker mount point issue resolution and fixes
-**Key Topics:** Volume configuration, path mapping, Santa Clara fixes
-**Who needs this:** Fixing file access issues in MCP servers
+See [DEPRECATED_DOCS.md](../DEPRECATED_DOCS.md) for complete list and archive instructions.
 
 ---
 
-### **🚀 Deployment & Status (4 files)**
+## Navigation Guide
 
-#### **25. IMPLEMENTATION_COMPLETE.md**
-**Purpose:** Cloudflare MCP Workers - implementation complete status report
-**Key Topics:** PowerShell bridge fixes, notification handling, deployment status
-**Who needs this:** Understanding deployment history and resolution
+### I want to...
 
-#### **26. FINAL_DEPLOYMENT_STATUS.md**
-**Purpose:** Cloudflare MCP Workers - final verification and test results
-**Key Topics:** Worker versions, verification tests, JSON-RPC compliance
-**Who needs this:** Verifying deployment completion
+**Set up a new development environment**
+→ Start with [SETUP_GUIDE.md](SETUP_GUIDE.md)
 
-#### **27. POWERSHELL_BRIDGE_EMPTY_RESPONSE_FIX.md**
-**Purpose:** PowerShell bridge fix for "Unexpected End of JSON input" error
-**Key Topics:** Empty line prevention, 204 No Content, notification handling
-**Who needs this:** Fixing PowerShell bridge empty response issues
+**Configure Claude Desktop**
+→ See [CLAUDE_DESKTOP_SETUP.md](CLAUDE_DESKTOP_SETUP.md)
 
-#### **28. DOCUMENTATION_UPDATES_PHASE2.md**
-**Purpose:** Summary of doc changes after Phase 2 completion
-**Key Topics:** GitHub Copilot auth, terminal stability, recovery steps
-**Who needs this:** Understanding documentation evolution
+**Fix a problem**
+→ Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 
----
+**Understand an error**
+→ Review [ISSUES_AND_FIXES_CONSOLIDATED.md](ISSUES_AND_FIXES_CONSOLIDATED.md)
 
-### **📋 Meta Documentation (1 file)**
+**Learn best practices**
+→ Read [LESSONS_LEARNED_CONSOLIDATED.md](LESSONS_LEARNED_CONSOLIDATED.md)
 
-#### **29. DOCUMENTATION_INDEX.md** (This File)
-**Purpose:** Navigation guide for all 29 documentation files
-**Key Topics:** Categorized file listing, navigation paths, quick reference
-**Who needs this:** Finding the right documentation for your task
+**Build a new MCP server**
+→ Follow [MCP_SERVER_DEVELOPMENT_GUIDE.md](MCP_SERVER_DEVELOPMENT_GUIDE.md)
 
----
+**Understand the architecture**
+→ See [../../universal-cloud-connector/docs/ARCHITECTURE.md](../../universal-cloud-connector/docs/ARCHITECTURE.md)
 
-## Quick Navigation Guide
+**Add a new Docker service**
+→ Use [ADDITIVE_DOCKER_SETUP.md](ADDITIVE_DOCKER_SETUP.md)
 
-### **"I'm setting up from scratch"**
-→ Read: **FRESH_WORKSTATION_SETUP.md** (Phase 1-4 guide)
-
-### **"I want to integrate Claude Desktop"**
-→ Read: **CLAUDE_DESKTOP_SETUP.md** (local + cloud options)
-
-### **"Something isn't working"**
-→ Read: **MCP_DEVELOPMENT_LESSONS_LEARNED.md** (protocol, setup, troubleshooting)
-
-### **"I want to build a Python MCP server"**
-→ Read: **MCP_SERVER_DEVELOPMENT_GUIDE.md** (quick start + patterns)
-
-### **"I want to build a Node.js/TypeScript MCP server"**
-→ Read: **GITHUB_REMOTE_LESSONS_LEARNED.md** (real implementation example)
-
-### **"I need the Power Strip architecture overview"**
-→ Read: **ADDITIVE_DOCKER_SETUP.md** (multi-server design)
-
-### **"Which ports are in use?"**
-→ Read: **POWER_STRIP_QUICK_REFERENCE.md** (port registry 3001-3005)
-
-### **"I need to run/maintain the environment"**
-→ Read: **OPERATIONAL_NOTES.md** (daily operations, health checks)
-
-### **"I want to understand the bridge layer"**
-→ Read: **BRIDGE_SELECTION.md** (decision matrix + comparison)
-
-### **"What MCP protocol details do I need?"**
-→ Read: **JSON_RPC_2.0_COMPLIANCE.md** (request/response formats)
-
-### **"I'm sharing this with someone"**
-→ Share: **Repository README.md** (on GitHub)
+**Deploy to production**
+→ Review [../../universal-cloud-connector/docs/DEPLOYMENT.md](../../universal-cloud-connector/docs/DEPLOYMENT.md)
 
 ---
 
-## Key Concepts Explained
+## Documentation Standards
 
-### **Why stdio instead of HTTP?**
+### File Naming
 
-**MCP Protocol Requirements:**
-- Persistent bidirectional communication
-- Line-by-line JSON-RPC message handling
-- Server stays running indefinitely
+- **Guides**: `GUIDE_NAME_GUIDE.md` (e.g., `SETUP_GUIDE.md`)
+- **References**: `TOPIC_REFERENCE.md` (e.g., `POWER_STRIP_QUICK_REFERENCE.md`)
+- **Consolidated**: `TOPIC_CONSOLIDATED.md` (e.g., `LESSONS_LEARNED_CONSOLIDATED.md`)
+- **Index**: `DOCUMENTATION_INDEX.md` (this file)
 
-**HTTP Approach (Doesn't Work):**
-- One request → one response → connection closes
-- Cannot maintain state between requests
-- Requires wrapper scripts that exit after each call
+### Update Frequency
 
-**stdio Approach (Works):**
-- Direct stdin/stdout communication
-- Server runs continuously via async event loop
-- Handles multiple messages over same connection
-- Native MCP SDK support
+| Type | Update Frequency |
+|------|------------------|
+| Issue docs | When issues discovered/fixed |
+| Architecture | When system changes |
+| Setup guides | When setup process changes |
+| Lessons learned | After major learnings |
+| This index | When docs added/removed |
 
-### **Docker exec vs. HTTP Proxy**
+### Maintenance
 
-**Failed Architecture:**
-```
-Claude Desktop → curl wrapper → nginx → Flask HTTP server
-```
+**Current Documentation** (✅):
+- Actively maintained
+- Reflects current state
+- Updated as system evolves
 
-**Working Architecture:**
-```
-Claude Desktop → wsl docker exec → MCP Python SDK server (stdio)
-```
+**Reference Documentation** (ℹ️):
+- Historical reference
+- Not actively updated
+- Still potentially useful
 
-**Why it works:**
-- Direct process invocation
-- Native stdio pipes
-- No protocol translation needed
-- Simpler, more reliable
-
-### **Container Naming**
-
-Docker Compose creates containers with this pattern:
-```
-<project-name>-<service-name>-<instance>
-```
-
-Example:
-- Project: `mcp-dev-environment`
-- Service: `santa-clara`
-- Result: `mcp-dev-environment-santa-clara-1`
-
-**Always verify with:** `docker compose ps`
+**Deprecated Documentation** (❌):
+- No longer maintained
+- Superseded by other docs
+- Listed in DEPRECATED_DOCS.md
 
 ---
 
-## Common Pitfalls & Solutions
+## Contributing to Documentation
 
-### **Pitfall 1: Building HTTP MCP Servers**
-**Mistake:** Creating Flask/FastAPI servers with HTTP endpoints  
-**Solution:** Use MCP Python SDK with stdio transport from the start
+### Adding New Documentation
 
-### **Pitfall 2: Buffered Python Output**
-**Mistake:** Forgetting `-u` flag in Python command  
-**Solution:** Always use `python -u` for unbuffered output in MCP servers
+1. Create document following naming standards
+2. Add entry to this index
+3. Update relevant cross-references
+4. Commit with descriptive message
 
-### **Pitfall 3: Wrong Protocol Version**
-**Mistake:** Using outdated protocol version (2024-11-05)  
-**Solution:** Use `2025-06-18` to match Claude Desktop
+### Updating Existing Documentation
 
-### **Pitfall 4: Container Name Assumptions**
-**Mistake:** Assuming container name is just the service name  
-**Solution:** Use `docker compose ps` to get exact name with project prefix
+1. Update document content
+2. Update "Last Updated" date in header
+3. Add entry to document's Change Log
+4. Update this index if needed
 
-### **Pitfall 5: Incomplete Restart**
-**Mistake:** Only closing Claude Desktop window (still in system tray)  
-**Solution:** Right-click system tray icon → Quit, then restart
+### Deprecating Documentation
 
----
-
-## Testing Workflow
-
-### **Phase 2: Environment Testing**
-
-```bash
-# 1. Containers running
-docker compose ps
-
-# 2. Nginx responding
-curl -k https://localhost:8443/health
-
-# 3. Services accessible
-curl -k https://localhost:8443/
-```
-
-### **Phase 3: MCP Server Testing**
-
-```bash
-# 1. Initialize
-echo '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}},"id":1}' | docker exec -i CONTAINER python -u /app/server.py
-
-# 2. Tools/List
-echo '{"jsonrpc":"2.0","method":"tools/list","id":2}' | docker exec -i CONTAINER python -u /app/server.py
-
-# 3. Tools/Call
-echo '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"TOOL_NAME","arguments":{...}},"id":3}' | docker exec -i CONTAINER python -u /app/server.py
-```
-
-### **Phase 3: Claude Desktop Testing**
-
-1. Restart Claude Desktop
-2. Ask: "What MCP tools do you have access to?"
-3. Verify tools appear
-4. Test tool execution with real data
-5. Check logs if issues occur
+1. Create or update consolidated replacement
+2. Add to [DEPRECATED_DOCS.md](../DEPRECATED_DOCS.md)
+3. Remove from "Current" section of this index
+4. Move to archive or add deprecation notice
 
 ---
 
-## File Locations Reference
+## Recent Changes
 
-### **Windows Paths**
-- Claude Desktop config: `C:\Users\USERNAME\AppData\Roaming\Claude\claude_desktop_config.json`
-- Claude Desktop logs: `C:\Users\USERNAME\AppData\Roaming\Claude\logs\`
+### December 6, 2025
+- ✅ Created comprehensive consolidation documents
+- ✅ Deprecated 30+ individual issue/fix documents
+- ✅ Consolidated 5 lessons learned documents
+- ✅ Updated architecture documentation
+- ✅ Created this index
+- ✅ Added deprecation tracking
 
-### **WSL Paths**
-- Project root: `~/mcp-dev-environment/`
-- Server code: `~/mcp-dev-environment/servers/santa-clara/`
-- Logs: `~/mcp-dev-environment/logs/`
-- Certificates: `~/mcp-dev-environment/certs/`
-
-### **Container Paths**
-- Server code: `/app/server.py`
-- Logs: `/app/logs/`
+### Previous Updates
+See individual documents for detailed change logs.
 
 ---
 
-## Support & Resources
+## Support
 
-### **Official Documentation**
-- MCP Specification: https://modelcontextprotocol.io/
-- MCP Python SDK: https://github.com/anthropics/mcp-python
-- Docker Compose: https://docs.docker.com/compose/
+**For documentation issues**:
+1. Check if information exists in consolidated docs
+2. Review this index for correct document
+3. Check DEPRECATED_DOCS.md for superseded content
 
-### **Troubleshooting**
-1. Check: **MCP_DEVELOPMENT_LESSONS_LEARNED.md**
-2. Check: Container logs (`docker logs CONTAINER_NAME`)
-3. Check: Claude Desktop logs (`C:\Users\...\AppData\Roaming\Claude\logs\`)
-4. Check: GitHub Issues on repository
-
-### **Project Repository**
-- URL: https://github.com/jcornell3/mcp-dev-environment
-- Branch: main
-- Visibility: Private
+**For technical issues**:
+1. See [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+2. Review [ISSUES_AND_FIXES_CONSOLIDATED.md](ISSUES_AND_FIXES_CONSOLIDATED.md)
 
 ---
 
-## Version History
-
-### **Version 2.0 - December 4, 2025** ✨ COMPREHENSIVE REORGANIZATION
-- **Complete coverage**: Expanded from 8 files to comprehensive index of all 29 documentation files
-- **Category-based organization**: 8 categories with clear navigation (Setup, Architecture, Development, Reference, Bridges, Lessons Learned, Deployment, Meta)
-- **Enhanced Quick Navigation**: 10 use-case driven paths instead of 7
-- **Clear purpose statements**: Each file includes purpose, key topics, and audience
-- **Deprecated notices**: Marked WRAPPER_SETUP.md as deprecated with guidance
-- **Status badges**: ⭐ highlighting critical/start-here docs, 🔧🏗️📚 category icons
-- **Statistics**: 29 files across 8 categories, 4 deprecated/historical
-
-### **Version 1.1 - December 4, 2025**
-- Added GITHUB_REMOTE_LESSONS_LEARNED.md (Node.js/TypeScript server example)
-- Comprehensive documentation for GitHub Remote MCP server
-- 12 GitHub tools implementation guide
-- Power Strip architecture with 5 MCP servers (ports 3001-3005)
-- Multi-runtime bridge support (Python + Node.js)
-- Context optimization patterns for AI system prompts
-- Updated navigation guide with Node.js server path
-
-### **Version 1.0 - December 1, 2025**
-- Initial complete documentation
-- Phase 1, 2, 3 fully validated
-- Working MCP server integrated with Claude Desktop
-- Comprehensive lessons learned documented
-- Development guide created
-
----
-
-## Next Steps
-
-### **For Users:**
-1. Follow FRESH_WORKSTATION_SETUP.md
-2. Complete all three phases
-3. Test with Claude Desktop
-4. Build additional MCP servers using the development guide
-
-### **For Documentation:**
-1. ✅ Phase 1-3 documented and validated
-2. ✅ Lessons learned captured
-3. ✅ Development guide created
-4. ⏳ Future: Add Phase 4 (advanced development workflows)
-5. ⏳ Future: Add cloud deployment guide (if needed)
-
----
-
-## Acknowledgments
-
-This environment was built and documented through extensive trial and error, debugging, and iteration. Special recognition for:
-
-- **GitHub Copilot & Claude Code:** Automated environment setup
-- **Claude Desktop:** Target integration platform
-- **MCP Python SDK:** Proper stdio implementation
-- **Docker Compose:** Container orchestration
-- **WSL2:** Seamless Windows/Linux integration
-
-All lessons learned were captured to save future developers from encountering the same issues.
-
----
-
-**Document Version:** 2.0
-**Last Updated:** December 4, 2025
-**Status:** Complete & Comprehensive - All 29 Documentation Files Indexed  
+**This index is maintained and current as of December 6, 2025.**

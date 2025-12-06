@@ -3,6 +3,9 @@
 /**
  * HTTP/SSE Wrapper for GitHub MCP Server
  * Converts stdio-based MCP server to HTTP/SSE transport for use with Universal Cloud Connector Bridge
+ *
+ * CRITICAL: Each session gets its own GitHub MCP server process
+ * This is required because MCP over stdio is stateful and one-to-one
  */
 
 const http = require('http');
@@ -14,90 +17,8 @@ const SERVER_HOST = '0.0.0.0';
 const GITHUB_TOKEN = process.env.GITHUB_PERSONAL_ACCESS_TOKEN || '';
 const GITHUB_TOOLSETS = process.env.GITHUB_TOOLSETS || 'repos,issues,pull_requests,actions';
 
-// Session management
+// Session management - each session has its own server process
 const sessions = new Map();
-let serverProcess = null;
-let serverReadyPromise = null;
-let serverReadyResolve = null;
-
-// Initialize ready promise
-serverReadyPromise = new Promise((resolve) => {
-  serverReadyResolve = resolve;
-});
-
-// Start the GitHub MCP server in stdio mode
-function startGitHubServer() {
-  console.log('[WRAPPER] Starting GitHub MCP server in stdio mode...');
-
-  serverProcess = spawn('github-mcp-server', ['stdio'], {
-    stdio: ['pipe', 'pipe', 'pipe'],
-    env: {
-      ...process.env,
-      GITHUB_PERSONAL_ACCESS_TOKEN: GITHUB_TOKEN,
-      GITHUB_TOOLSETS: GITHUB_TOOLSETS
-    }
-  });
-
-  let initMessageReceived = false;
-
-  // Handle server stdout (responses from server)
-  serverProcess.stdout.on('data', (data) => {
-    const lines = data.toString().split('\n').filter(l => l);
-    lines.forEach(line => {
-      try {
-        const message = JSON.parse(line);
-
-        // Log first message to know server is ready
-        if (!initMessageReceived && message.jsonrpc) {
-          initMessageReceived = true;
-          console.log('[WRAPPER] GitHub MCP server ready');
-          serverReadyResolve();
-        }
-
-        // Broadcast to all listening sessions
-        for (const [sessionId, session] of sessions.entries()) {
-          if (session.listening && session.response) {
-            try {
-              session.response.write(`data: ${JSON.stringify(message)}\n\n`);
-            } catch (err) {
-              console.error(`[WRAPPER] Error sending to session ${sessionId}:`, err.message);
-            }
-          }
-        }
-      } catch (err) {
-        console.error('[WRAPPER] Error parsing server message:', err.message);
-      }
-    });
-  });
-
-  // Handle server stderr
-  serverProcess.stderr.on('data', (data) => {
-    const message = data.toString().trim();
-    if (message) {
-      console.error('[SERVER STDERR]', message);
-    }
-  });
-
-  serverProcess.on('error', (err) => {
-    console.error('[WRAPPER] GitHub MCP Server spawn error:', err);
-  });
-
-  serverProcess.on('close', (code) => {
-    console.log(`[WRAPPER] GitHub MCP Server exited with code ${code}`);
-    // Notify all sessions
-    for (const [sessionId, session] of sessions.entries()) {
-      if (session.listening && session.response) {
-        try {
-          session.response.end();
-        } catch (err) {
-          // Response already ended
-        }
-      }
-    }
-  });
-
-  return serverProcess;
-}
 
 // Create HTTP server
 const server = http.createServer(async (req, res) => {
@@ -119,7 +40,7 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify({
       status: 'ok',
       activeSessions: sessions.size,
-      serverRunning: serverProcess && !serverProcess.killed
+      serverRunning: true
     }));
     return;
   }
@@ -127,15 +48,28 @@ const server = http.createServer(async (req, res) => {
   // SSE endpoint for session negotiation and streaming responses
   if (req.url === '/sse' && req.method === 'GET') {
     const sessionId = randomUUID().replace(/-/g, '');
+
+    console.log(`[WRAPPER] New SSE connection: ${sessionId}`);
+
+    // Spawn a dedicated GitHub MCP server for this session
+    const serverProcess = spawn('github-mcp-server', ['stdio'], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        GITHUB_PERSONAL_ACCESS_TOKEN: GITHUB_TOKEN,
+        GITHUB_TOOLSETS: GITHUB_TOOLSETS
+      }
+    });
+
     const session = {
       id: sessionId,
       created: Date.now(),
       listening: false,
-      response: null
+      response: null,
+      serverProcess: serverProcess,
+      buffer: ''  // Buffer for incomplete JSON lines
     };
     sessions.set(sessionId, session);
-
-    console.log(`[WRAPPER] New SSE connection: ${sessionId}`);
 
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -153,10 +87,74 @@ const server = http.createServer(async (req, res) => {
 
     console.log(`[WRAPPER] Sent endpoint event for session ${sessionId}`);
 
+    // Handle server stdout (responses from server)
+    serverProcess.stdout.on('data', (data) => {
+      // Append to buffer
+      session.buffer += data.toString();
+
+      // Split by newlines and process complete lines
+      const lines = session.buffer.split('\n');
+      // Keep the last incomplete line in buffer
+      session.buffer = lines.pop() || '';
+
+      lines.forEach(line => {
+        if (!line.trim()) return;
+
+        try {
+          const message = JSON.parse(line);
+
+          // Send via SSE to this session only
+          if (session.listening && session.response) {
+            try {
+              session.response.write(`data: ${JSON.stringify(message)}\n\n`);
+            } catch (err) {
+              console.error(`[WRAPPER] Error sending to session ${sessionId}:`, err.message);
+            }
+          }
+        } catch (err) {
+          console.error(`[WRAPPER] Error parsing server message for session ${sessionId}:`, err.message);
+          console.error(`[WRAPPER] Problematic line: ${line}`);
+        }
+      });
+    });
+
+    // Handle server stderr
+    serverProcess.stderr.on('data', (data) => {
+      const message = data.toString().trim();
+      if (message) {
+        console.error(`[SERVER ${sessionId} STDERR]`, message);
+      }
+    });
+
+    serverProcess.on('error', (err) => {
+      console.error(`[WRAPPER] GitHub MCP Server spawn error for session ${sessionId}:`, err);
+    });
+
+    serverProcess.on('close', (code) => {
+      console.log(`[WRAPPER] GitHub MCP Server for session ${sessionId} exited with code ${code}`);
+      if (session.listening && session.response) {
+        try {
+          session.response.end();
+        } catch (err) {
+          // Response already ended
+        }
+      }
+      // Clean up session
+      setTimeout(() => {
+        sessions.delete(sessionId);
+      }, 100);
+    });
+
     req.on('close', () => {
       session.listening = false;
       console.log(`[WRAPPER] SSE connection closed: ${sessionId}`);
-      // Keep session in map briefly for final messages
+
+      // Kill the server process when client disconnects
+      if (serverProcess && !serverProcess.killed) {
+        serverProcess.kill();
+      }
+
+      // Keep session in map briefly for cleanup
       setTimeout(() => {
         sessions.delete(sessionId);
       }, 1000);
@@ -173,7 +171,16 @@ const server = http.createServer(async (req, res) => {
     if (!sessionId || !sessions.has(sessionId)) {
       console.error(`[WRAPPER] Invalid session_id: ${sessionId}`);
       res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Invalid session_id' }));
+      res.end(JSON.stringify({ error: 'session_id is required' }));
+      return;
+    }
+
+    const session = sessions.get(sessionId);
+
+    if (!session.serverProcess || session.serverProcess.killed) {
+      console.error(`[WRAPPER] Server process dead for session ${sessionId}`);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Server process not running' }));
       return;
     }
 
@@ -184,14 +191,11 @@ const server = http.createServer(async (req, res) => {
 
     req.on('end', async () => {
       try {
-        // Wait for server to be ready
-        await serverReadyPromise;
-
         const message = JSON.parse(body);
-        console.log(`[WRAPPER] ${sessionId} -> ${message.method || 'request'}`);
+        console.log(`[WRAPPER] Session ${sessionId} -> ${message.method || 'request'} (id: ${message.id})`);
 
-        // Send to GitHub MCP server via stdin
-        serverProcess.stdin.write(JSON.stringify(message) + '\n');
+        // Send to this session's GitHub MCP server via stdin
+        session.serverProcess.stdin.write(JSON.stringify(message) + '\n');
 
         // Respond with 202 Accepted
         // The actual response will come via SSE
@@ -220,6 +224,7 @@ const server = http.createServer(async (req, res) => {
 <p>Messages endpoint: <code>POST /messages?session_id=...</code></p>
 <p>Health check: <code>GET /health</code></p>
 <p>Active sessions: ${sessions.size}</p>
+<p><strong>Note:</strong> Each session spawns its own GitHub MCP server process</p>
 </body>
 </html>
     `);
@@ -235,8 +240,7 @@ const server = http.createServer(async (req, res) => {
 console.log('[WRAPPER] GitHub MCP HTTP Wrapper starting...');
 console.log(`[WRAPPER] GitHub Token: ${GITHUB_TOKEN ? 'set' : 'NOT SET'}`);
 console.log(`[WRAPPER] GitHub Toolsets: ${GITHUB_TOOLSETS}`);
-
-startGitHubServer();
+console.log(`[WRAPPER] Mode: One server process per session`);
 
 server.listen(PORT, SERVER_HOST, () => {
   console.log(`[WRAPPER] HTTP server listening on ${SERVER_HOST}:${PORT}`);
@@ -246,22 +250,22 @@ server.listen(PORT, SERVER_HOST, () => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('[WRAPPER] Received SIGTERM, shutting down...');
-  if (serverProcess) {
-    serverProcess.kill();
-  }
-  server.close(() => {
-    process.exit(0);
-  });
-});
+function shutdown() {
+  console.log('[WRAPPER] Shutting down...');
 
-process.on('SIGINT', () => {
-  console.log('[WRAPPER] Received SIGINT, shutting down...');
-  if (serverProcess) {
-    serverProcess.kill();
+  // Kill all session server processes
+  for (const [sessionId, session] of sessions.entries()) {
+    if (session.serverProcess && !session.serverProcess.killed) {
+      console.log(`[WRAPPER] Killing server process for session ${sessionId}`);
+      session.serverProcess.kill();
+    }
   }
+
   server.close(() => {
+    console.log('[WRAPPER] HTTP server closed');
     process.exit(0);
   });
-});
+}
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
