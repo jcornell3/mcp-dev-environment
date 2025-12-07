@@ -2,6 +2,7 @@
 """
 Santa Clara Property Tax MCP Server
 Uses MCP Python SDK with native HTTP support via FastAPI
+Scrapes real-time property tax data from Santa Clara County TellerOnline
 """
 
 import asyncio
@@ -16,6 +17,14 @@ from fastapi import FastAPI, Request, Header, HTTPException
 from fastapi.responses import Response
 from fastapi.routing import Mount
 import uvicorn
+
+# Import scraper module
+try:
+    from scraper import scrape_property_tax, get_cache_stats, clear_cache
+    SCRAPER_AVAILABLE = True
+except ImportError as e:
+    logging.warning(f"Scraper module not available: {e}. Using mock data only.")
+    SCRAPER_AVAILABLE = False
 
 # Setup logging
 logging.basicConfig(
@@ -67,16 +76,35 @@ PROPERTY_DATABASE = {
 }
 
 
-def generate_property_data(apn: str) -> dict:
-    """Get property data from database or generate mock data for unknown APNs"""
-    # Check if APN exists in our database
+async def generate_property_data(apn: str) -> dict:
+    """
+    Get property data - tries scraper first, falls back to mock data
+
+    Priority:
+    1. Live scraper (if available and enabled)
+    2. Mock database (for testing/fallback)
+    3. Error if APN not found anywhere
+    """
+
+    # Try scraper first if available
+    if SCRAPER_AVAILABLE and os.environ.get("USE_SCRAPER", "true").lower() == "true":
+        try:
+            logging.info(f"Attempting to scrape property data for APN {apn}")
+            data = await scrape_property_tax(apn)
+            data["source"] = "scraped"
+            return data
+        except Exception as e:
+            logging.warning(f"Scraper failed for APN {apn}: {str(e)}. Falling back to mock data.")
+
+    # Fall back to mock database
     if apn in PROPERTY_DATABASE:
         data = PROPERTY_DATABASE[apn].copy()
         data["retrieved_at"] = datetime.now().isoformat()
+        data["source"] = "mock_database"
         return data
 
-    # For unknown APNs, return error indicating not found
-    raise ValueError(f"APN {apn} not found in database. This is a demonstration server with limited property data.")
+    # No data available
+    raise ValueError(f"APN {apn} not found. Scraper {'unavailable' if not SCRAPER_AVAILABLE else 'failed'} and no mock data exists.")
 
 
 @server.list_tools()
@@ -108,8 +136,8 @@ async def call_tool(name: str, arguments: dict):
         if not apn:
             raise ValueError("APN is required")
 
-        # Generate property data
-        data = generate_property_data(apn)
+        # Generate property data (async)
+        data = await generate_property_data(apn)
 
         # Format response
         text_response = f"""Property Information for APN: {apn}
@@ -215,11 +243,22 @@ app.routes.append(Mount("/messages", app=messages_endpoint))
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {
+    health_data = {
         "status": "healthy",
         "service": "santa-clara",
-        "api_key_configured": MCP_API_KEY != "default-api-key"
+        "api_key_configured": MCP_API_KEY != "default-api-key",
+        "scraper_available": SCRAPER_AVAILABLE,
+        "scraper_enabled": os.environ.get("USE_SCRAPER", "true").lower() == "true"
     }
+
+    # Add cache stats if scraper is available
+    if SCRAPER_AVAILABLE:
+        try:
+            health_data["cache_stats"] = get_cache_stats()
+        except:
+            pass
+
+    return health_data
 
 
 if __name__ == "__main__":
