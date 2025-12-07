@@ -126,11 +126,11 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                 try:
                     logging.info("Uploading to Google Drive...")
 
-                    # Get or create folder if specified
+                    # Get or create folder if specified, otherwise use default
                     folder_id = None
-                    if drive_folder:
-                        folder_id = get_or_create_folder(drive_folder)
-                        logging.info(f"Using Drive folder: {drive_folder} (ID: {folder_id})")
+                    folder_name = drive_folder if drive_folder else "MCP-YouTube-to-MP3"
+                    folder_id = get_or_create_folder(folder_name)
+                    logging.info(f"Using Drive folder: {folder_name} (ID: {folder_id})")
 
                     # Upload file
                     drive_result = upload_to_drive(
@@ -145,8 +145,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                     drive_info = f"\n\n☁️ Google Drive Upload:\n"
                     drive_info += f"- File ID: {drive_result['file_id']}\n"
                     drive_info += f"- View Link: {drive_result['web_view_link']}\n"
-                    if drive_folder:
-                        drive_info += f"- Folder: {drive_folder}\n"
+                    drive_info += f"- Folder: {folder_name}\n"
                     drive_info += f"- Status: ✅ Upload successful"
 
                     result["content"][0]["text"] += drive_info
