@@ -41,10 +41,11 @@ Real-time property tax information scraper for Santa Clara County, California.
 
 ### Get Property Information
 
-Tool: `get_property_info`
+**Tool: `get_property_info`**
 
 Parameters:
-- `apn` (string, required): Assessor's Parcel Number (e.g., "288-13-033")
+- `apn` (string, optional*): Assessor's Parcel Number (e.g., "288-13-033")
+  - *Optional if `MY_APN` environment variable is configured
 
 Returns:
 - Address
@@ -54,9 +55,25 @@ Returns:
 - Installment details (amounts, due dates, payment status)
 - Payment history
 
+**Tool: `get_my_property_info`**
+
+Parameters: None (uses `MY_APN` environment variable)
+
+Returns: Same as `get_property_info`
+
+Use this tool for natural language queries like:
+- "What is my property tax bill?"
+- "Show my property taxes"
+- "Is my tax paid?"
+- "When is my next payment due?"
+
 ### Environment Variables
 
 - `MCP_API_KEY`: API key for authentication (required)
+- `MY_APN`: Your default Assessor's Parcel Number (optional)
+  - Enables natural language queries like "what is my property tax bill?"
+  - Used automatically by `get_my_property_info` tool
+  - Used as fallback by `get_property_info` when no APN provided
 - `PORT`: Server port (default: 3000)
 - `USE_SCRAPER`: Enable/disable live scraping (default: "true")
   - Set to "false" to use only mock data
@@ -112,6 +129,7 @@ docker build -t mcp-santa-clara .
 docker run -d \
   -p 3002:3000 \
   -e MCP_API_KEY=your-api-key-here \
+  -e MY_APN=288-13-033 \
   -e USE_SCRAPER=true \
   --name mcp-santa-clara \
   mcp-santa-clara
@@ -131,6 +149,8 @@ Expected response:
   "api_key_configured": true,
   "scraper_available": true,
   "scraper_enabled": true,
+  "my_apn_configured": true,
+  "my_apn": "288-13-033",
   "cache_stats": {
     "total_entries": 0,
     "valid_entries": 0,
@@ -153,6 +173,7 @@ Expected response:
 2. **Run server:**
    ```bash
    export MCP_API_KEY=test-key
+   export MY_APN=288-13-033
    python server.py
    ```
 

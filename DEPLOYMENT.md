@@ -86,6 +86,7 @@ Services: math, santa-clara, youtube-transcript
    cat > .env << 'EOF'
    MCP_ENV=production
    MCP_API_KEY=c64b03bb5b3cc7f8ab1582c7d3da229d7d57698790ca79c51d40d50510c6bb77
+   MY_APN=288-13-033
    DOMAIN=5.78.159.29
    HTTP_PORT=80
    HTTPS_PORT=443

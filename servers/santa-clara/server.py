@@ -113,16 +113,25 @@ async def list_tools():
     return [
         Tool(
             name="get_property_info",
-            description="Get property information by APN (Assessor's Parcel Number)",
+            description="Get property information by APN (Assessor's Parcel Number). If no APN is provided and MY_APN environment variable is set, uses that default APN. This allows queries like 'what is my property tax bill?' to work automatically.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "apn": {
                         "type": "string",
-                        "description": "Assessor's Parcel Number (e.g., 123-456-789)"
+                        "description": "Assessor's Parcel Number (e.g., 123-456-789). Optional if MY_APN environment variable is configured."
                     }
                 },
-                "required": ["apn"]
+                "required": []  # Make apn optional since we can use MY_APN
+            }
+        ),
+        Tool(
+            name="get_my_property_info",
+            description="Get property information for the user's configured property (MY_APN environment variable). Use this for queries like 'what is my property tax bill?', 'show my property taxes', 'is my tax paid?', etc.",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": []
             }
         )
     ]
@@ -131,16 +140,32 @@ async def list_tools():
 @server.call_tool()
 async def call_tool(name: str, arguments: dict):
     """Execute MCP tool"""
-    if name == "get_property_info":
-        apn = arguments.get("apn")
+    if name == "get_my_property_info":
+        # Use MY_APN from environment
+        apn = os.environ.get("MY_APN")
         if not apn:
-            raise ValueError("APN is required")
+            raise ValueError("MY_APN environment variable not configured. Please set MY_APN to your Assessor's Parcel Number.")
 
         # Generate property data (async)
         data = await generate_property_data(apn)
 
-        # Format response
-        text_response = f"""Property Information for APN: {apn}
+    elif name == "get_property_info":
+        # Use provided APN or fall back to MY_APN
+        apn = arguments.get("apn")
+        if not apn:
+            # Try MY_APN as fallback
+            apn = os.environ.get("MY_APN")
+            if not apn:
+                raise ValueError("APN is required. Either provide an APN parameter or configure MY_APN environment variable.")
+
+        # Generate property data (async)
+        data = await generate_property_data(apn)
+
+    else:
+        raise ValueError(f"Unknown tool: {name}")
+
+    # Format response (same for both tools)
+    text_response = f"""Property Information for APN: {apn}
 
 Address: {data['address']}
 Tax Rate Area: {data['tax_rate_area']}
@@ -164,14 +189,12 @@ Installment 2:
   Pay By: {data['installment_2']['pay_by_date']}
   Last Payment: {data['installment_2']['last_payment_date']}"""
 
-        return [
-            TextContent(
-                type="text",
-                text=text_response
-            )
-        ]
-    else:
-        raise ValueError(f"Unknown tool: {name}")
+    return [
+        TextContent(
+            type="text",
+            text=text_response
+        )
+    ]
 
 
 # FastAPI app
@@ -248,8 +271,13 @@ async def health_check():
         "service": "santa-clara",
         "api_key_configured": MCP_API_KEY != "default-api-key",
         "scraper_available": SCRAPER_AVAILABLE,
-        "scraper_enabled": os.environ.get("USE_SCRAPER", "true").lower() == "true"
+        "scraper_enabled": os.environ.get("USE_SCRAPER", "true").lower() == "true",
+        "my_apn_configured": os.environ.get("MY_APN") is not None
     }
+
+    # Add MY_APN value if configured (for debugging)
+    if os.environ.get("MY_APN"):
+        health_data["my_apn"] = os.environ.get("MY_APN")
 
     # Add cache stats if scraper is available
     if SCRAPER_AVAILABLE:
