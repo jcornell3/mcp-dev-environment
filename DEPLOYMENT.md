@@ -17,31 +17,51 @@ Services: youtube-to-mp3, github
 
 ### Setup
 
-1. Copy the local configuration:
+1. **Create downloads directory:**
+   ```bash
+   mkdir -p ~/downloads
+   ```
+
+2. **Copy the local configuration:**
    ```bash
    cp docker-compose.yml.local docker-compose.yml
    ```
 
-2. Ensure `.env` file exists with local settings:
+3. **Ensure `.env` file exists with local settings:**
    ```bash
    MCP_ENV=development
    MCP_API_KEY=5b919081bcca34a32d8ac272e6691521cabbf71b1baace759cc6c710a3003c74
-   DOWNLOADS_DIR=/mnt/c/Users/jcorn/Downloads
+   DOWNLOADS_DIR=/home/YOUR_USERNAME/downloads
    GITHUB_PERSONAL_ACCESS_TOKEN=your_token_here
    ```
 
-3. Deploy:
+   **Note:** Replace `YOUR_USERNAME` with your actual WSL username (run `whoami` to find it).
+
+4. **Deploy:**
    ```bash
    export MCP_API_KEY=5b919081bcca34a32d8ac272e6691521cabbf71b1baace759cc6c710a3003c74
    docker compose down
    docker compose up -d
    ```
 
-4. Verify:
+5. **Verify:**
    ```bash
    curl -s http://127.0.0.1:3004/health
    curl -s http://127.0.0.1:3005/health
    ```
+
+6. **Access downloads from Windows:**
+
+   MP3 files will be downloaded to the WSL-native path `~/downloads` (e.g., `/home/YOUR_USERNAME/downloads`).
+
+   To access these files from Windows, open Windows Explorer and navigate to:
+   ```
+   \\wsl$\Ubuntu\home\YOUR_USERNAME\downloads
+   ```
+
+   **Tip:** Create a Windows shortcut to this location for easy access!
+
+   See [DOWNLOADS_SETUP.md](DOWNLOADS_SETUP.md) for detailed instructions on accessing downloads from Windows.
 
 ## VPS #1 Deployment (5.78.159.29)
 
