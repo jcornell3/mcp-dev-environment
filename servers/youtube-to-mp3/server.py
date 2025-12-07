@@ -12,6 +12,7 @@ from mcp.server import Server
 from mcp.server.sse import SseServerTransport
 from mcp.types import Tool, TextContent
 from mcp_logic import youtube_to_mp3
+from google_drive import upload_to_drive, get_or_create_folder, is_drive_configured
 from fastapi import FastAPI, Request, Header, HTTPException
 from fastapi.responses import Response
 from fastapi.routing import Mount
@@ -33,7 +34,7 @@ async def list_tools() -> list[Tool]:
     return [
         Tool(
             name="youtube_to_mp3",
-            description="Download YouTube video and convert to MP3 with metadata preservation (ID3 tags, album art). ⚠️ Legal Notice: Use only with permission - respect copyright and YouTube ToS. Recommended for: your own videos, public domain content, Creative Commons licensed content.",
+            description="Download YouTube video and convert to MP3 with metadata preservation (ID3 tags, album art). Optionally upload to Google Drive. ⚠️ Legal Notice: Use only with permission - respect copyright and YouTube ToS. Recommended for: your own videos, public domain content, Creative Commons licensed content.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -56,6 +57,16 @@ async def list_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Custom output filename (optional, defaults to video title). Do not include .mp3 extension",
                         "default": ""
+                    },
+                    "upload_to_drive": {
+                        "type": "boolean",
+                        "description": "Upload MP3 file to Google Drive after conversion. Requires Google Drive credentials to be configured.",
+                        "default": False
+                    },
+                    "drive_folder": {
+                        "type": "string",
+                        "description": "Google Drive folder name to upload to (optional, creates if doesn't exist, defaults to root)",
+                        "default": ""
                     }
                 },
                 "required": ["video_url"]
@@ -74,8 +85,10 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             bitrate = arguments.get("bitrate", "192k")
             preserve_metadata = arguments.get("preserve_metadata", True)
             output_filename = arguments.get("output_filename", "")
+            upload_to_drive_flag = arguments.get("upload_to_drive", False)
+            drive_folder = arguments.get("drive_folder", "")
 
-            logging.info(f"Processing video_url={video_url}, bitrate={bitrate}, preserve_metadata={preserve_metadata}")
+            logging.info(f"Processing video_url={video_url}, bitrate={bitrate}, preserve_metadata={preserve_metadata}, upload_to_drive={upload_to_drive_flag}")
 
             if not video_url:
                 raise ValueError("video_url is required")
@@ -84,6 +97,13 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             valid_bitrates = ["128k", "192k", "256k", "320k"]
             if bitrate not in valid_bitrates:
                 raise ValueError(f"Invalid bitrate. Must be one of: {', '.join(valid_bitrates)}")
+
+            # Check Google Drive configuration if upload requested
+            if upload_to_drive_flag and not is_drive_configured():
+                raise ValueError(
+                    "Google Drive upload requested but credentials not configured.\n"
+                    "Please set GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_DRIVE_CREDENTIALS_JSON environment variable."
+                )
 
             # Convert video
             import os
@@ -99,6 +119,45 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             )
 
             logging.info(f"Download succeeded: {result['data']['file_path']}")
+
+            # Upload to Google Drive if requested
+            drive_result = None
+            if upload_to_drive_flag:
+                try:
+                    logging.info("Uploading to Google Drive...")
+
+                    # Get or create folder if specified
+                    folder_id = None
+                    if drive_folder:
+                        folder_id = get_or_create_folder(drive_folder)
+                        logging.info(f"Using Drive folder: {drive_folder} (ID: {folder_id})")
+
+                    # Upload file
+                    drive_result = upload_to_drive(
+                        file_path=result['data']['file_path'],
+                        folder_id=folder_id,
+                        file_name=None  # Use original filename
+                    )
+
+                    logging.info(f"Google Drive upload succeeded: {drive_result['file_id']}")
+
+                    # Append Drive info to response
+                    drive_info = f"\n\n☁️ Google Drive Upload:\n"
+                    drive_info += f"- File ID: {drive_result['file_id']}\n"
+                    drive_info += f"- View Link: {drive_result['web_view_link']}\n"
+                    if drive_folder:
+                        drive_info += f"- Folder: {drive_folder}\n"
+                    drive_info += f"- Status: ✅ Upload successful"
+
+                    result["content"][0]["text"] += drive_info
+                    result["data"]["google_drive"] = drive_result
+
+                except Exception as e:
+                    logging.error(f"Google Drive upload failed: {str(e)}")
+                    error_info = f"\n\n☁️ Google Drive Upload:\n- Status: ❌ Upload failed\n- Error: {str(e)}"
+                    result["content"][0]["text"] += error_info
+                    result["data"]["google_drive"] = {"success": False, "error": str(e)}
+
             return [TextContent(type="text", text=result["content"][0]["text"])]
 
         else:
@@ -185,7 +244,8 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "youtube-to-mp3",
-        "api_key_configured": MCP_API_KEY != "default-api-key"
+        "api_key_configured": MCP_API_KEY != "default-api-key",
+        "google_drive_configured": is_drive_configured()
     }
 
 
