@@ -1,6 +1,6 @@
 # MCP Development Environment - Documentation Index
 
-**Last Updated**: December 6, 2025
+**Last Updated**: December 7, 2025
 **Status**: Current and Maintained ✅
 
 This index provides quick access to all current documentation. Deprecated files are listed separately.
@@ -83,6 +83,8 @@ This index provides quick access to all current documentation. Deprecated files 
 | [YOUTUBE_TRANSCRIPT_USAGE.md](YOUTUBE_TRANSCRIPT_USAGE.md) | YouTube transcript server | ✅ Current |
 | [YOUTUBE_TRANSCRIPT_DEVELOPMENT_NOTES.md](YOUTUBE_TRANSCRIPT_DEVELOPMENT_NOTES.md) | Development notes | ✅ Current |
 | [YOUTUBE_TO_MP3_DEVELOPMENT_NOTES.md](YOUTUBE_TO_MP3_DEVELOPMENT_NOTES.md) | YouTube to MP3 notes | ✅ Current |
+| [../servers/youtube-to-mp3/GOOGLE_DRIVE_SETUP.md](../servers/youtube-to-mp3/GOOGLE_DRIVE_SETUP.md) | Google Drive upload setup | ✅ Current |
+| [../servers/youtube-to-mp3/README.md](../servers/youtube-to-mp3/README.md) | YouTube to MP3 server docs | ✅ Current |
 
 ### Miscellaneous
 
@@ -250,6 +252,11 @@ See [DEPRECATED_DOCS.md](../DEPRECATED_DOCS.md) for complete list and archive in
 
 ## Recent Changes
 
+### December 7, 2025
+- ✅ Added Google Drive integration documentation
+- ✅ Referenced GOOGLE_DRIVE_SETUP.md and server README
+- ✅ Updated YouTube to MP3 server documentation
+
 ### December 6, 2025
 - ✅ Created comprehensive consolidation documents
 - ✅ Deprecated 30+ individual issue/fix documents
@@ -276,4 +283,4 @@ See individual documents for detailed change logs.
 
 ---
 
-**This index is maintained and current as of December 6, 2025.**
+**This index is maintained and current as of December 7, 2025.**

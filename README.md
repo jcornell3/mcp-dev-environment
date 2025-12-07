@@ -91,7 +91,7 @@ See [docs/SETUP_GUIDE.md](docs/SETUP_GUIDE.md) for complete setup instructions i
 | **math-mcp** | 3001 | Basic math operations | `calculate`, `factorial` |
 | **santa-clara-mcp** | 3002 | Property data lookup | `get_property_info` |
 | **youtube-transcript-mcp** | 3003 | YouTube video transcripts | `get_transcript`, `list_available_languages` |
-| **youtube-to-mp3-mcp** | 3004 | YouTube audio extraction | `youtube_to_mp3` |
+| **youtube-to-mp3-mcp** | 3004 | YouTube audio extraction with optional Google Drive upload | `youtube_to_mp3` |
 | **github-mcp** | 3005 | GitHub repository operations | Repository search, file operations, issues, PRs, code search |
 
 ---
@@ -363,6 +363,13 @@ See [LICENSE](LICENSE) file for details.
 ---
 
 ## Change Log
+
+### December 7, 2025
+- ✅ Added Google Drive integration to youtube-to-mp3 server
+- ✅ OAuth2 authentication with Web application flow
+- ✅ Standardized "MCP-YouTube-to-MP3" folder for uploads
+- ✅ Comprehensive unit tests for Google Drive functionality
+- ✅ Complete setup documentation (GOOGLE_DRIVE_SETUP.md)
 
 ### December 6, 2025
 - ✅ Fixed SSE endpoint race condition (bridge timeout extended)
