@@ -37,12 +37,14 @@ Two authentication methods are supported:
    - User support email: Your email
    - Developer contact: Your email
    - Scopes: Add `https://www.googleapis.com/auth/drive.file`
-   - Test users: Add your Gmail address
-4. Application type: **Desktop app**
-5. Name: `YouTube MP3 Desktop Client`
-6. Click **Create**
-7. Download the credentials JSON file
-8. Save as `google-drive-credentials.json`
+   - **Test users**: Add your Gmail address in the **Test users** section
+   - **Important**: Also add your email under the **Audience** screen
+4. Application type: **Web application** (NOT Desktop app)
+5. Name: `YouTube MP3 Web Client`
+6. **Authorized redirect URIs**: Add `http://localhost:8080`
+7. Click **Create**
+8. Download the credentials JSON file
+9. Save as `google-drive-credentials.json`
 
 ### Step 4: Generate User Token
 
@@ -51,27 +53,55 @@ Run this Python script to generate the user token:
 ```python
 #!/usr/bin/env python3
 """
-Generate Google Drive OAuth2 token
-Run this script locally to authorize access to your Google Drive
+Generate Google Drive OAuth2 token - Web Application Flow
 """
 
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google_auth_oauthlib.flow import Flow
 import json
+import os
+
+# Allow HTTP for localhost (required for local OAuth flow)
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
 # Path to your downloaded credentials
 CLIENT_SECRETS_FILE = "google-drive-credentials.json"
 
-flow = InstalledAppFlow.from_client_secrets_file(
+# Must match the redirect URI configured in Google Cloud Console
+REDIRECT_URI = "http://localhost:8080"
+
+# Create flow with explicit redirect URI
+flow = Flow.from_client_secrets_file(
     CLIENT_SECRETS_FILE,
-    scopes=SCOPES
+    scopes=SCOPES,
+    redirect_uri=REDIRECT_URI
 )
 
-# Run local server for OAuth flow
-creds = flow.run_local_server(port=0)
+# Generate authorization URL
+auth_url, state = flow.authorization_url(
+    access_type='offline',
+    prompt='consent'
+)
 
-# Save credentials
+print("=" * 80)
+print("1. Copy this URL and paste it in your browser:\n")
+print(auth_url)
+print("\n" + "=" * 80)
+print("\n2. After authorizing, you'll be redirected to:")
+print("   http://localhost:8080/?state=...&code=...&scope=...")
+print("\n3. Your browser will show 'This site can't be reached' - THAT'S NORMAL!")
+print("\n4. Copy the ENTIRE URL from your browser's address bar")
+print("   (starts with http://localhost:8080/?state=...)")
+print("\n" + "=" * 80)
+
+redirect_response = input("\nPaste the full redirect URL here: ").strip()
+
+# Exchange authorization code for credentials
+flow.fetch_token(authorization_response=redirect_response)
+creds = flow.credentials
+
+# Save token
 token_data = {
     'token': creds.token,
     'refresh_token': creds.refresh_token,
@@ -84,7 +114,7 @@ token_data = {
 with open('google-drive-token.json', 'w') as f:
     json.dump(token_data, f, indent=2)
 
-print("✅ Token saved to google-drive-token.json")
+print("\n✅ SUCCESS! Token saved to google-drive-token.json")
 print("Copy this file to your credentials directory")
 ```
 
@@ -95,7 +125,11 @@ pip install google-auth-oauthlib
 python generate_token.py
 ```
 
-This will open a browser window for Google authentication. After authorizing, `google-drive-token.json` will be created.
+**Important Notes:**
+- The browser will show "This site can't be reached" after authorization - this is normal!
+- Copy the ENTIRE URL from the address bar (starts with `http://localhost:8080/?state=...`)
+- The script sets `OAUTHLIB_INSECURE_TRANSPORT=1` to allow HTTP for localhost
+- Make sure the redirect URI matches what you configured in Google Cloud Console
 
 ### Step 5: Configure Environment
 
@@ -194,7 +228,7 @@ This will open a browser window for Google authentication. After authorizing, `g
 
 ## Usage
 
-### Basic Upload
+### Basic Upload (Default Folder)
 
 ```
 Convert https://www.youtube.com/watch?v=dQw4w9WgXcQ to MP3 in my Google Drive
@@ -207,6 +241,8 @@ Claude will call:
   "upload_to_drive": true
 }
 ```
+
+**Note:** Files are uploaded to the standardized folder **"MCP-YouTube-to-MP3"** by default. This folder is created automatically if it doesn't exist.
 
 ### Upload to Specific Folder
 
@@ -272,7 +308,7 @@ When upload is successful, you'll see:
 ☁️ Google Drive Upload:
 - File ID: 1abc123xyz456def789
 - View Link: https://drive.google.com/file/d/1abc123xyz456def789/view
-- Folder: Music
+- Folder: MCP-YouTube-to-MP3
 - Status: ✅ Upload successful
 ```
 

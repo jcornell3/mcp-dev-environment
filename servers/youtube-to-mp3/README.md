@@ -26,7 +26,7 @@ Downloads MP3 to local downloads directory.
 Convert https://www.youtube.com/watch?v=dQw4w9WgXcQ to MP3 in my Google Drive
 ```
 
-Converts and uploads to Google Drive root folder.
+Converts and uploads to the standardized **"MCP-YouTube-to-MP3"** folder (created automatically if doesn't exist).
 
 ### Upload to Specific Folder
 
@@ -58,7 +58,7 @@ Parameters:
 - `preserve_metadata` (optional): Embed ID3 tags and album art (default: true)
 - `output_filename` (optional): Custom filename without .mp3 extension
 - `upload_to_drive` (optional): Upload to Google Drive (default: false)
-- `drive_folder` (optional): Google Drive folder name (default: root)
+- `drive_folder` (optional): Google Drive folder name (default: "MCP-YouTube-to-MP3")
 
 ## Environment Variables
 
@@ -177,7 +177,7 @@ The MP3 file includes:
 **File Location:**
 - Local: `DOWNLOADS_DIR/<video-title>.mp3`
 - Windows (via symlink): `C:\Users\<username>\Downloads\<video-title>.mp3`
-- Google Drive: Root or specified folder
+- Google Drive: "MCP-YouTube-to-MP3" folder (default) or specified folder
 
 ## Legal Notice
 
