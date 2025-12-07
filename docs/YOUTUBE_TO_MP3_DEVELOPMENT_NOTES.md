@@ -9,6 +9,7 @@ The YouTube to MP3 MCP server enables Claude to download YouTube videos and conv
 - Album art extraction and embedding (YouTube thumbnail)
 - Video statistics preservation (views, likes, uploader)
 - Configurable bitrate options (128k, 192k, 256k, 320k)
+- **Optional Google Drive upload** (added December 7, 2025)
 - Full MCP JSON-RPC protocol compliance
 
 ## Architecture
@@ -22,20 +23,32 @@ The YouTube to MP3 MCP server enables Claude to download YouTube videos and conv
    - `embed_metadata(mp3_path, metadata, video_info)` - ID3 tag and album art embedding
    - `youtube_to_mp3()` - Main download and conversion logic
 
-2. **server.py** (100+ lines)
+2. **server.py** (250+ lines)
    - MCP Server wrapper using official Python SDK
    - `list_tools()` - Register youtube_to_mp3 tool with input schema
    - `call_tool()` - Execute tool with parameter validation
+   - Google Drive upload integration (optional)
    - Error handling with troubleshooting suggestions
+   - Health endpoint with Google Drive configuration status
 
-3. **Dockerfile** (21 lines)
+3. **google_drive.py** (NEW - 150+ lines)
+   - `get_drive_service()` - Get authenticated Google Drive service
+   - `upload_to_drive()` - Upload file to Google Drive
+   - `get_or_create_folder()` - Get or create folder by name
+   - `is_drive_configured()` - Check if credentials are configured
+   - Supports OAuth2 user credentials and Service Account authentication
+
+4. **Dockerfile** (25 lines)
    - Python 3.11-slim base image
    - System dependencies: ffmpeg, wget, ca-certificates
-   - Python dependencies: mcp, yt-dlp, mutagen, Pillow, requests
+   - Python dependencies: mcp, yt-dlp, mutagen, Pillow, requests, google-api-python-client, google-auth
+   - Credentials directory mount point
 
-4. **docker-compose.yml**
-   - youtube-to-mp3 service with stdio transport
+5. **docker-compose.yml.local**
+   - youtube-to-mp3 service with HTTP/SSE transport
    - Volume mount for persistent downloads
+   - Volume mount for Google Drive credentials (read-only)
+   - Environment variables for Google Drive configuration
 
 ## Issues Encountered and Solutions
 
@@ -161,6 +174,87 @@ In MCP servers where stdout is the communication channel, use structured error r
 
 ---
 
+### Issue 4: Google Drive OAuth2 Setup - Desktop vs Web Application
+
+**Problem:**
+Initial OAuth2 setup used "Desktop app" application type, which doesn't support configurable redirect URIs, causing OAuth flow failures.
+
+```
+Error 400: invalid_request
+Missing parameter: redirect_uri
+```
+
+**Root Cause:**
+Google Cloud Console's "Desktop app" OAuth client type doesn't provide a field to add redirect URIs. The generated authorization URL doesn't include the redirect_uri parameter, which is required for the manual OAuth flow in WSL/Linux environments without a browser.
+
+**Solution:**
+Changed OAuth client type from "Desktop app" to "Web application":
+
+1. **OAuth Client Configuration:**
+   - Application type: **Web application** (NOT Desktop app)
+   - Authorized redirect URIs: `http://localhost:8080`
+   - Test users must be added in both "Test users" section AND "Audience" screen
+
+2. **Token Generation Script:**
+```python
+from google_auth_oauthlib.flow import Flow  # Not InstalledAppFlow
+
+# Required for localhost HTTP
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
+flow = Flow.from_client_secrets_file(
+    CLIENT_SECRETS_FILE,
+    scopes=SCOPES,
+    redirect_uri="http://localhost:8080"  # Explicit redirect URI
+)
+```
+
+3. **Manual Authorization Process:**
+   - Script generates authorization URL
+   - User opens URL in browser and authorizes
+   - Browser redirects to `http://localhost:8080/?state=...&code=...`
+   - Browser shows "This site can't be reached" - **this is normal**
+   - User copies entire URL from address bar
+   - Script exchanges authorization code for access token
+
+**Key Insights:**
+- Desktop app OAuth clients work for `InstalledAppFlow.run_local_server()` but not manual flows
+- Web application clients require explicit redirect URI configuration
+- `OAUTHLIB_INSECURE_TRANSPORT=1` is required for HTTP localhost in production OAuth library
+- Test users need to be added in Audience screen, not just OAuth consent screen
+
+**Files Created:**
+- `servers/youtube-to-mp3/GOOGLE_DRIVE_SETUP.md` - Complete setup guide
+- Token generation scripts using Flow instead of InstalledAppFlow
+
+---
+
+### Issue 5: Standardized Folder Name for Google Drive Uploads
+
+**Problem:**
+Initial implementation allowed custom folder names but defaulted to Google Drive root, making it difficult to find uploaded files.
+
+**Solution:**
+Implemented standardized default folder name "MCP-YouTube-to-MP3":
+
+```python
+# In server.py
+folder_name = drive_folder if drive_folder else "MCP-YouTube-to-MP3"
+folder_id = get_or_create_folder(folder_name)
+```
+
+**Benefits:**
+- All uploads without specified folder go to consistent location
+- Easier to find and organize downloaded MP3s
+- Folder created automatically if doesn't exist
+- Users can still override with custom folder via `drive_folder` parameter
+
+**Files Modified:**
+- `servers/youtube-to-mp3/server.py` (lines 131-133)
+- `servers/youtube-to-mp3/tests/test_google_drive_integration.py`
+
+---
+
 ## Implementation Best Practices
 
 ### 1. yt-dlp Configuration for MCP Servers
@@ -280,6 +374,80 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 ```
 
 The exception message is returned in the JSON-RPC response, providing diagnostic info without polluting stdout.
+
+### 5. Google Drive Integration
+
+**OAuth2 Configuration:**
+```python
+# Use Flow (not InstalledAppFlow) for manual auth flows
+from google_auth_oauthlib.flow import Flow
+
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # Required for localhost
+
+flow = Flow.from_client_secrets_file(
+    credentials_file,
+    scopes=['https://www.googleapis.com/auth/drive.file'],
+    redirect_uri='http://localhost:8080'
+)
+```
+
+**Standardized Folder Pattern:**
+```python
+# Default to standardized folder name
+folder_name = user_folder if user_folder else "MCP-YouTube-to-MP3"
+folder_id = get_or_create_folder(folder_name)
+```
+
+**Service Initialization:**
+```python
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+
+def get_drive_service():
+    """Get authenticated Drive service, supporting both OAuth2 and Service Account"""
+    creds_path = os.environ.get('GOOGLE_DRIVE_CREDENTIALS_JSON')
+
+    if creds_path and os.path.exists(creds_path):
+        with open(creds_path, 'r') as f:
+            creds_data = json.load(f)
+
+        # Check if it's OAuth2 user credentials or Service Account
+        if 'refresh_token' in creds_data:
+            # OAuth2 user credentials
+            creds = Credentials.from_authorized_user_info(creds_data)
+        else:
+            # Service Account credentials
+            from google.oauth2 import service_account
+            creds = service_account.Credentials.from_service_account_info(
+                creds_data,
+                scopes=['https://www.googleapis.com/auth/drive.file']
+            )
+
+        return build('drive', 'v3', credentials=creds)
+
+    return None
+```
+
+**Upload with Folder Organization:**
+```python
+from googleapiclient.http import MediaFileUpload
+
+def upload_to_drive(file_path: str, folder_id: Optional[str] = None) -> dict:
+    service = get_drive_service()
+
+    file_metadata = {'name': os.path.basename(file_path)}
+    if folder_id:
+        file_metadata['parents'] = [folder_id]
+
+    media = MediaFileUpload(file_path, resumable=True)
+    file = service.files().create(
+        body=file_metadata,
+        media_body=media,
+        fields='id,name,webViewLink,webContentLink,size'
+    ).execute()
+
+    return file
+```
 
 ---
 
@@ -485,6 +653,14 @@ metadata['genre'] = lookup_genre(metadata['title'], metadata['artist'])
 
 **Document Status:** Complete
 **Created:** 2025-12-02
-**Last Updated:** 2025-12-02
+**Last Updated:** 2025-12-07
 **Purpose:** Capture development journey and lessons learned for future MCP server implementations
 **Audience:** Developers building MCP servers with similar requirements
+
+---
+
+## Additional Documentation
+
+- **[GOOGLE_DRIVE_SETUP.md](../servers/youtube-to-mp3/GOOGLE_DRIVE_SETUP.md)** - Complete Google Drive integration setup guide
+- **[YouTube to MP3 Server README](../servers/youtube-to-mp3/README.md)** - Server documentation and usage examples
+- **[Google Drive Integration Tests](../servers/youtube-to-mp3/tests/test_google_drive_integration.py)** - Comprehensive unit tests
