@@ -31,27 +31,38 @@ server = Server("santa-clara")
 
 # Real property data for Santa Clara County APNs
 PROPERTY_DATABASE = {
-    "288-12-033": {
-        "apn": "288-12-033",
-        "address": "337 APRIL WY CAMPBELL CA 95008",
+    "288-13-033": {
+        "apn": "288-13-033",
+        "apn_suffix": "00",
+        "address": "1373 CRONWELL DR CAMPBELL CA 95008",
         "owner": {
             "name": "Property Owner Name",
             "type": "individual"
         },
         "property_type": "residential",
-        "assessed_value": 950000,
-        "tax_amount": 11875,
-        "year_built": 1972,
-        "lot_size_sqft": 9375,
-        "building_sqft": 1760,
-        "bedrooms": 3,
-        "bathrooms": 2,
-        "last_sale_date": "2019-03-22",
-        "last_sale_price": 875000,
-        "status": "active",
+        "tax_rate_area": "010-025",
+        "tax_year": "2025/2026",
+        "annual_tax_bill": 3695.40,
+        "installment_1": {
+            "tax_amount": 1847.70,
+            "additional_charges": 0.00,
+            "amount_paid": 1847.70,
+            "balance_due": 0.00,
+            "pay_by_date": "12/10/2025",
+            "status": "PAID",
+            "last_payment_date": "10/09/2025"
+        },
+        "installment_2": {
+            "tax_amount": 1847.70,
+            "additional_charges": 0.00,
+            "amount_paid": 0.00,
+            "balance_due": 1847.70,
+            "pay_by_date": "04/10/2026",
+            "status": "DUE",
+            "last_payment_date": "N/A"
+        },
         "county": "Santa Clara",
-        "land_use_code": "R1",
-        "parcel_number": "288-12-033"
+        "parcel_number": "288-13-033"
     }
 }
 
@@ -104,13 +115,26 @@ async def call_tool(name: str, arguments: dict):
         text_response = f"""Property Information for APN: {apn}
 
 Address: {data['address']}
-Owner: {data['owner']['name']}
+Tax Rate Area: {data['tax_rate_area']}
 Property Type: {data['property_type']}
-Assessed Value: ${data['assessed_value']:,}
-Tax Amount: ${data['tax_amount']:,.0f}
-Year Built: {data['year_built']}
-Lot Size: {data['lot_size_sqft']:,} sqft
-Building Size: {data['building_sqft']:,} sqft"""
+
+2025/2026 Annual Tax Bill: ${data['annual_tax_bill']:,.2f}
+
+Installment 1:
+  Amount: ${data['installment_1']['tax_amount']:,.2f}
+  Status: {data['installment_1']['status']}
+  Paid: ${data['installment_1']['amount_paid']:,.2f}
+  Balance Due: ${data['installment_1']['balance_due']:,.2f}
+  Pay By: {data['installment_1']['pay_by_date']}
+  Last Payment: {data['installment_1']['last_payment_date']}
+
+Installment 2:
+  Amount: ${data['installment_2']['tax_amount']:,.2f}
+  Status: {data['installment_2']['status']}
+  Paid: ${data['installment_2']['amount_paid']:,.2f}
+  Balance Due: ${data['installment_2']['balance_due']:,.2f}
+  Pay By: {data['installment_2']['pay_by_date']}
+  Last Payment: {data['installment_2']['last_payment_date']}"""
 
         return [
             TextContent(

@@ -1,65 +1,24 @@
-version: '3.8'
-
 services:
-  # ============================================================================
-  # CORE MCP SERVERS (Now with Native HTTP/SSE Support)
-  # ============================================================================
-
-  math:
-    build: ./servers/math
-    ports:
-      - "127.0.0.1:3001:3000"
-    environment:
-      - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
-      - PORT=3000
-    restart: unless-stopped
-
-  santa-clara:
-    build: ./servers/santa-clara
-    ports:
-      - "127.0.0.1:3002:3000"
-    environment:
-      - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
-      - PORT=3000
-    restart: unless-stopped
-
-  youtube-transcript:
-    build: ./servers/youtube-transcript
-    ports:
-      - "127.0.0.1:3003:3000"
-    environment:
-      - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
-      - PORT=3000
-    restart: unless-stopped
-
   youtube-to-mp3:
     build: ./servers/youtube-to-mp3
+    container_name: mcp-youtube-to-mp3
     ports:
       - "127.0.0.1:3004:3000"
     environment:
-      - DOWNLOADS_DIR=/app/downloads
-      - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
       - PORT=3000
+      - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
+      - DOWNLOADS_DIR=${DOWNLOADS_DIR:-/downloads}
     volumes:
-      - ${DOWNLOADS_DIR:-/mnt/c/Users/jcorn/Downloads}:/app/downloads
+      - ${DOWNLOADS_DIR:-/tmp}:/downloads
     restart: unless-stopped
 
   github-mcp:
     build: ./servers/shared/github-mcp-http-wrapper
+    container_name: mcp-github
     ports:
       - "127.0.0.1:3005:3000"
     environment:
-      - GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN}
-      - GITHUB_TOOLSETS=repos,issues,pull_requests,actions
       - PORT=3000
+      - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
+      - GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN}
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-networks:
-  default:
-    driver: bridge
