@@ -17,10 +17,12 @@ Services: youtube-to-mp3, github
 
 ### Setup
 
-1. **Create downloads directory:**
+1. **Create symbolic link to Windows Downloads:**
    ```bash
-   mkdir -p ~/downloads
+   ln -s /mnt/c/Users/YOUR_USERNAME/Downloads ~/downloads
    ```
+
+   **Note:** Replace `YOUR_USERNAME` with your Windows username. This creates a symbolic link so Docker can write directly to your Windows Downloads folder.
 
 2. **Copy the local configuration:**
    ```bash
@@ -52,16 +54,9 @@ Services: youtube-to-mp3, github
 
 6. **Access downloads from Windows:**
 
-   MP3 files will be downloaded to the WSL-native path `~/downloads` (e.g., `/home/YOUR_USERNAME/downloads`).
+   MP3 files are downloaded directly to your Windows Downloads folder (`C:\Users\YOUR_USERNAME\Downloads`) via the symbolic link created in step 1.
 
-   To access these files from Windows, open Windows Explorer and navigate to:
-   ```
-   \\wsl$\Ubuntu\home\YOUR_USERNAME\downloads
-   ```
-
-   **Tip:** Create a Windows shortcut to this location for easy access!
-
-   See [DOWNLOADS_SETUP.md](DOWNLOADS_SETUP.md) for detailed instructions on accessing downloads from Windows.
+   No special access needed - files appear in your normal Windows Downloads folder!
 
 ## VPS #1 Deployment (5.78.159.29)
 

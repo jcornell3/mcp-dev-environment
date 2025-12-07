@@ -2,118 +2,140 @@
 
 ## Current Configuration
 
-The YouTube to MP3 service downloads files to a **WSL-native directory** to ensure reliable Docker volume mounting:
+The YouTube to MP3 service uses a **symbolic link** approach to write files directly to your Windows Downloads folder while maintaining Docker volume compatibility.
 
-- **WSL Path:** `/home/jcornell/downloads`
+- **WSL Symbolic Link:** `/home/jcornell/downloads` → `/mnt/c/Users/jcorn/Downloads`
 - **Container Path:** `/downloads`
-- **Docker Volume:** `/home/jcornell/downloads:/downloads`
+- **Docker Volume:** `/home/jcornell/downloads:/downloads` (which resolves to Windows Downloads)
+- **Windows Path:** `C:\Users\jcorn\Downloads`
 
-This approach avoids WSL/Windows path translation issues that can cause files to not appear when using `/mnt/c/` paths.
+## How It Works
 
-## Accessing Downloads from Windows
+1. A symbolic link is created in WSL that points to your Windows Downloads folder
+2. Docker mounts this symbolic link as a volume
+3. When the container writes to `/downloads`, it follows the symbolic link
+4. Files appear directly in your Windows Downloads folder (`C:\Users\jcorn\Downloads`)
 
-You have three options to access downloaded MP3 files from Windows:
+## Initial Setup
 
-### Option 1: Access via Windows Explorer (Recommended)
+When setting up this project on a new machine:
 
-Open Windows Explorer and navigate to:
-
-```
-\\wsl$\Ubuntu\home\jcornell\downloads
-```
-
-Or type this in the Windows Explorer address bar:
-```
-\\wsl.localhost\Ubuntu\home\jcornell\downloads
+```bash
+# Replace YOUR_USERNAME with your Windows username
+ln -s /mnt/c/Users/YOUR_USERNAME/Downloads ~/downloads
 ```
 
-**Tip:** Bookmark this location in Windows Explorer for quick access!
-
-### Option 2: Create Windows Shortcut
-
-1. Open Windows Explorer
-2. Navigate to: `\\wsl$\Ubuntu\home\jcornell\downloads`
-3. Right-click in the address bar → "Copy address"
-4. Right-click on your Desktop → New → Shortcut
-5. Paste the address: `\\wsl$\Ubuntu\home\jcornell\downloads`
-6. Name it "MCP Downloads" or similar
-
-### Option 3: Create Symbolic Link (Advanced)
-
-**WARNING:** This requires Administrator privileges and will replace your existing Downloads folder with a link.
-
-**Only do this if you want ALL downloads to go to the WSL location.**
-
-1. Open Command Prompt or PowerShell **as Administrator**
-
-2. Backup your current Downloads folder (if needed):
-   ```cmd
-   move C:\Users\jcorn\Downloads C:\Users\jcorn\Downloads.backup
-   ```
-
-3. Create a symbolic link:
-   ```cmd
-   mklink /D C:\Users\jcorn\Downloads \\wsl$\Ubuntu\home\jcornell\downloads
-   ```
-
-4. Verify:
-   ```cmd
-   dir C:\Users\jcorn\Downloads
-   ```
-
-**To Undo:**
-```cmd
-rmdir C:\Users\jcorn\Downloads
-move C:\Users\jcorn\Downloads.backup C:\Users\jcorn\Downloads
+**To find your Windows username:**
+```bash
+ls /mnt/c/Users/
 ```
 
 ## Verification
 
 To verify the setup is working:
 
-1. Run this command in WSL:
+1. **Check the symbolic link exists:**
+   ```bash
+   ls -la ~/downloads
+   ```
+
+   Should show: `downloads -> /mnt/c/Users/YOUR_USERNAME/Downloads`
+
+2. **Test file creation:**
    ```bash
    docker exec mcp-youtube-to-mp3 sh -c 'echo "test" > /downloads/test-$(date +%s).txt'
    ```
 
-2. Check that the file appears:
-   - **In WSL:** `ls -lh /home/jcornell/downloads/`
-   - **In Windows:** Open `\\wsl$\Ubuntu\home\jcornell\downloads` in Explorer
+3. **Check Windows Downloads folder:**
+   - Open Windows File Explorer
+   - Navigate to your Downloads folder
+   - The test file should appear there immediately
+
+4. **Clean up test file:**
+   ```bash
+   rm ~/downloads/test-*.txt
+   ```
+
+## Accessing Downloads
+
+Downloads appear directly in your Windows Downloads folder:
+- **Windows:** `C:\Users\YOUR_USERNAME\Downloads`
+- **WSL:** `/home/jcornell/downloads` (via symbolic link)
+- **WSL (direct):** `/mnt/c/Users/YOUR_USERNAME/Downloads`
+
+No special access needed - just use your normal Windows Downloads folder!
 
 ## Troubleshooting
 
-### Files not appearing in Windows Explorer
+### Symbolic link doesn't exist
 
-1. Refresh Windows Explorer (F5)
-2. Verify WSL is running: `wsl --list --running`
-3. Check file exists in WSL: `ls -lh /home/jcornell/downloads/`
-4. Try accessing via: `\\wsl.localhost\Ubuntu\home\jcornell\downloads` (alternative path)
+If `~/downloads` doesn't exist or isn't a symbolic link:
 
-### Cannot access `\\wsl$` path
+```bash
+# Remove if it's a regular directory
+rm -rf ~/downloads  # WARNING: Only if it's empty!
 
-- Ensure WSL is running: `wsl --list --running`
-- Try the alternative: `\\wsl.localhost\Ubuntu\home\jcornell\downloads`
-- Restart WSL: `wsl --shutdown` then `wsl`
+# Create the symbolic link
+ln -s /mnt/c/Users/YOUR_USERNAME/Downloads ~/downloads
+```
+
+### Files not appearing in Windows Downloads
+
+1. **Verify symbolic link:**
+   ```bash
+   ls -la ~/downloads
+   ```
+   Should show it's a link to `/mnt/c/Users/YOUR_USERNAME/Downloads`
+
+2. **Check Windows path is accessible:**
+   ```bash
+   ls /mnt/c/Users/YOUR_USERNAME/Downloads
+   ```
+
+3. **Restart Docker containers:**
+   ```bash
+   export MCP_API_KEY=your_api_key_here
+   docker compose down
+   docker compose up -d
+   ```
 
 ### Permission issues
 
-If you get permission errors accessing files from Windows:
+If you get permission errors:
 
 ```bash
-# In WSL, make files world-readable
-chmod 644 /home/jcornell/downloads/*
+# Make the Windows Downloads folder accessible
+chmod 755 /mnt/c/Users/YOUR_USERNAME/Downloads
+```
+
+### Docker can't write to the volume
+
+This usually means the symbolic link was created after the container started:
+
+```bash
+# Recreate containers
+export MCP_API_KEY=your_api_key_here
+docker compose down
+docker compose up -d
 ```
 
 ## Why This Approach?
 
-The previous configuration used `/mnt/c/Users/jcorn/Downloads` which maps to the Windows filesystem. However, Docker containers running in WSL have issues writing to `/mnt/c/` paths due to:
+**Symbolic Link Method (Current):**
+- ✅ Files appear in Windows Downloads folder
+- ✅ Docker volume compatibility
+- ✅ Easy to access from Windows
+- ✅ One command setup on new machines
+- ✅ No need to remember special paths
 
-1. File system translation layers
-2. Permission mapping differences
-3. Windows file locking behavior
+**Previous Approach (WSL-only directory):**
+- ❌ Required special `\\wsl$` path to access from Windows
+- ❌ Files not in standard Downloads folder
+- ❌ Extra steps for Windows access
 
-Using a WSL-native path (`/home/jcornell/downloads`) ensures:
-- ✅ Reliable file writes from Docker containers
-- ✅ No permission issues
-- ✅ Better performance (native filesystem)
-- ✅ Files still accessible from Windows via `\\wsl$`
+**Direct `/mnt/c` Mount (Doesn't work):**
+- ❌ Docker volume mount failures
+- ❌ Permission issues
+- ❌ Files reported as saved but don't appear
+
+The symbolic link combines the best of both worlds: Docker gets a WSL-native path it can reliably write to, and the files appear in your normal Windows Downloads folder.
