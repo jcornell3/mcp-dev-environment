@@ -1,14 +1,25 @@
-# VPS Migration Plan: MCP Servers to 5.78.159.29
+# VPS Migration Plan: Hybrid Deployment (3 VPS + 2 Local)
 
 **Date**: December 6, 2025
 **Target VPS**: 5.78.159.29
-**Servers to Migrate**: math-mcp, santa-clara-mcp, youtube-transcript-mcp (+ optional: youtube-to-mp3, github-mcp)
+**Deployment Model**: Hybrid - Split between VPS and local
+
+**VPS Services** (Remote):
+- math-mcp (port 3001)
+- santa-clara-mcp (port 3002)
+- youtube-transcript-mcp (port 3003)
+
+**Local Services** (Stay on WSL):
+- youtube-to-mp3-mcp (port 3004) - Requires local file system access
+- github-mcp (port 3005) - Uses local GitHub token
 
 ---
 
 ## Executive Summary
 
-The current MCP deployment is **already VPS-ready** with minimal configuration changes needed. All server code binds to `0.0.0.0` (accepts connections from any interface), uses environment variables for configuration, and includes health check endpoints.
+This is a **hybrid deployment** where 3 production services move to VPS while 2 remain local. Claude Desktop will use **two separate Universal Cloud Connector instances**:
+1. **VPS Bridge** - Connects to remote services (math, santa-clara, youtube-transcript)
+2. **Local Bridge** - Connects to local services (youtube-to-mp3, github)
 
 **Only configuration files need updating** - no code changes required.
 
@@ -16,29 +27,43 @@ The current MCP deployment is **already VPS-ready** with minimal configuration c
 
 ## Architecture Overview
 
-### Current Setup (Local)
+### Current Setup (All Local)
 ```
 Claude Desktop (Windows)
     ↓ stdio via WSL
 Universal Cloud Connector Bridge (WSL)
-    server_url='http://127.0.0.1:3001/sse'
     ↓ HTTP/SSE
-Docker Containers (Local)
-    Ports: 127.0.0.1:3001-3005
+Docker Containers (Local WSL)
+    ├── math-mcp (127.0.0.1:3001)
+    ├── santa-clara-mcp (127.0.0.1:3002)
+    ├── youtube-transcript-mcp (127.0.0.1:3003)
+    ├── youtube-to-mp3-mcp (127.0.0.1:3004)
+    └── github-mcp (127.0.0.1:3005)
 ```
 
-### Target Setup (VPS Migration)
+### Target Setup (Hybrid Deployment)
 ```
 Claude Desktop (Windows)
     ↓ stdio via WSL
-Universal Cloud Connector Bridge (WSL - stays local)
-    server_url='http://5.78.159.29:3001/sse'
-    ↓ HTTP/SSE over Internet
-Docker Containers (VPS: 5.78.159.29)
-    Ports: 0.0.0.0:3001-3005
+    ├─ VPS Bridge Instance (for remote services)
+    │   ↓ HTTP/SSE over Internet
+    │   VPS Docker Containers (5.78.159.29)
+    │       ├── math-mcp (0.0.0.0:3001)
+    │       ├── santa-clara-mcp (0.0.0.0:3002)
+    │       └── youtube-transcript-mcp (0.0.0.0:3003)
+    │
+    └─ Local Bridge Instance (for local services)
+        ↓ HTTP/SSE localhost
+        Local Docker Containers (WSL)
+            ├── youtube-to-mp3-mcp (127.0.0.1:3004)
+            └── github-mcp (127.0.0.1:3005)
 ```
 
-**Key Decision**: Bridge stays local (WSL), only Docker containers move to VPS.
+**Key Architecture Decision**:
+- **Two Universal Cloud Connector instances** in Claude Desktop config
+- **VPS Bridge** connects to remote services (math, santa-clara, youtube-transcript)
+- **Local Bridge** connects to local services (youtube-to-mp3, github)
+- Each bridge instance is independent with its own server_url
 
 ---
 
@@ -58,192 +83,456 @@ git log -1
 
 ### 2. docker-compose.yml Port Bindings
 
-**File**: `docker-compose.yml`
+#### On VPS (5.78.159.29)
 
-**Change** (apply to all 5 services):
+**File**: `~/mcp-dev-environment/docker-compose.yml`
+
+**Change** (apply to VPS services only):
 ```yaml
 # BEFORE (localhost only)
 ports:
   - "127.0.0.1:3001:3000"
 
-# AFTER (all interfaces)
+# AFTER (all interfaces - VPS only)
 ports:
   - "0.0.0.0:3001:3000"
 ```
 
-**Services to update**:
-- math (port 3001)
-- santa-clara (port 3002)
-- youtube-transcript (port 3003)
-- youtube-to-mp3 (port 3004)
-- github-mcp (port 3005)
+**VPS Services to update**:
+- math (port 3001) → `0.0.0.0:3001:3000`
+- santa-clara (port 3002) → `0.0.0.0:3002:3000`
+- youtube-transcript (port 3003) → `0.0.0.0:3003:3000`
+
+**Remove from VPS docker-compose.yml**:
+- youtube-to-mp3 service (stays local)
+- github-mcp service (stays local)
+
+#### On Local WSL
+
+**File**: `/home/jcornell/mcp-dev-environment/docker-compose.yml`
+
+**Keep localhost binding** (no changes):
+```yaml
+# Local services stay on 127.0.0.1
+youtube-to-mp3:
+  ports:
+    - "127.0.0.1:3004:3000"
+
+github-mcp:
+  ports:
+    - "127.0.0.1:3005:3000"
+```
+
+**Remove from local docker-compose.yml after migration**:
+- math service (moved to VPS)
+- santa-clara service (moved to VPS)
+- youtube-transcript service (moved to VPS)
 
 ### 3. Environment Variables & API Tokens
-
-**File**: `.env` (create on VPS)
 
 ⚠️ **SECURITY CRITICAL:** Never use `default-api-key` in production!
 
 **Generate secure API tokens** (run these commands):
 ```bash
-# Generate MCP_API_KEY (for server authentication)
+# Generate VPS_API_KEY (for VPS services: math, santa-clara, youtube-transcript)
 openssl rand -hex 32
 
-# Generate BRIDGE_API_TOKEN (for bridge authentication)
+# Generate LOCAL_API_KEY (for local services: youtube-to-mp3, github)
 openssl rand -hex 32
 
-# Save these tokens - you'll need them for both VPS and local config
+# Save both tokens - you'll need them in Claude Desktop config
 ```
 
-**Create .env file on VPS**:
+#### VPS Environment (.env on VPS)
+
+**File**: `~/mcp-dev-environment/.env` (on VPS 5.78.159.29)
+
 ```env
 MCP_ENV=production
 
-# API KEYS - Use the tokens generated above (NOT default-api-key!)
-MCP_API_KEY=<paste-first-generated-token-here>
-BRIDGE_API_TOKEN=<paste-second-generated-token-here>
+# VPS API KEY - Use the VPS_API_KEY generated above
+MCP_API_KEY=<paste-VPS-token-here>
 
 # Domain Configuration
 DOMAIN=5.78.159.29
 HTTP_PORT=80
 HTTPS_PORT=443
+```
 
-# Storage
-DOWNLOADS_DIR=/data/downloads
+**Note**: VPS does NOT need:
+- `DOWNLOADS_DIR` (youtube-to-mp3 is local)
+- `GITHUB_PERSONAL_ACCESS_TOKEN` (github-mcp is local)
 
-# GitHub Token (if using github-mcp server)
+#### Local Environment (.env on WSL)
+
+**File**: `/home/jcornell/mcp-dev-environment/.env` (on local WSL)
+
+```env
+MCP_ENV=development
+
+# Local API KEY - Use the LOCAL_API_KEY generated above
+MCP_API_KEY=<paste-LOCAL-token-here>
+
+# Storage for youtube-to-mp3
+DOWNLOADS_DIR=/home/jcornell/downloads
+
+# GitHub Token for github-mcp server
 GITHUB_PERSONAL_ACCESS_TOKEN=<your-existing-github-token>
 ```
 
-**IMPORTANT**: The same `MCP_API_KEY` must be used in:
-1. VPS `.env` file (above)
-2. Local Claude Desktop config (`api_token` parameter)
+#### Token Usage Summary
 
-### 4. Volume Mounts (youtube-to-mp3)
+| Service | Location | API Key | Used In |
+|---------|----------|---------|---------|
+| math-mcp | VPS | VPS_API_KEY | VPS bridge config |
+| santa-clara-mcp | VPS | VPS_API_KEY | VPS bridge config |
+| youtube-transcript-mcp | VPS | VPS_API_KEY | VPS bridge config |
+| youtube-to-mp3-mcp | Local | LOCAL_API_KEY | Local bridge config |
+| github-mcp | Local | LOCAL_API_KEY | Local bridge config |
 
-**Create downloads directory on VPS**:
-```bash
-sudo mkdir -p /data/downloads
-sudo chown -R $USER:$USER /data/downloads
-```
-
-### 5. Claude Desktop Config (Local Windows)
+### 4. Claude Desktop Config - Dual Bridge Configuration
 
 **File**: `C:\Users\jcorn\AppData\Roaming\Claude\claude_desktop_config.json`
 
-**Update server_url for each bridge**:
+This config requires **TWO sets of bridges** - one pointing to VPS, one pointing to local:
+
 ```json
 {
   "mcpServers": {
-    "math-bridge": {
+    "// VPS BRIDGES - Remote Services": "",
+
+    "math-vps": {
       "command": "wsl",
       "args": [
         "bash", "-c",
-        "cd /home/jcornell/universal-cloud-connector && export server_url='http://5.78.159.29:3001/sse' && export api_token='<your-token>' && /home/jcornell/.nvm/versions/node/v24.11.1/bin/node dist/index.js"
+        "cd /home/jcornell/universal-cloud-connector && export server_url='http://5.78.159.29:3001/sse' && export api_token='<VPS_API_KEY>' && /home/jcornell/.nvm/versions/node/v24.11.1/bin/node dist/index.js"
+      ]
+    },
+
+    "santa-clara-vps": {
+      "command": "wsl",
+      "args": [
+        "bash", "-c",
+        "cd /home/jcornell/universal-cloud-connector && export server_url='http://5.78.159.29:3002/sse' && export api_token='<VPS_API_KEY>' && /home/jcornell/.nvm/versions/node/v24.11.1/bin/node dist/index.js"
+      ]
+    },
+
+    "youtube-transcript-vps": {
+      "command": "wsl",
+      "args": [
+        "bash", "-c",
+        "cd /home/jcornell/universal-cloud-connector && export server_url='http://5.78.159.29:3003/sse' && export api_token='<VPS_API_KEY>' && /home/jcornell/.nvm/versions/node/v24.11.1/bin/node dist/index.js"
+      ]
+    },
+
+    "// LOCAL BRIDGES - Local Services": "",
+
+    "youtube-to-mp3-local": {
+      "command": "wsl",
+      "args": [
+        "bash", "-c",
+        "cd /home/jcornell/universal-cloud-connector && export server_url='http://127.0.0.1:3004/sse' && export api_token='<LOCAL_API_KEY>' && /home/jcornell/.nvm/versions/node/v24.11.1/bin/node dist/index.js"
+      ]
+    },
+
+    "github-local": {
+      "command": "wsl",
+      "args": [
+        "bash", "-c",
+        "cd /home/jcornell/universal-cloud-connector && export server_url='http://127.0.0.1:3005/sse' && export api_token='<LOCAL_API_KEY>' && /home/jcornell/.nvm/versions/node/v24.11.1/bin/node dist/index.js"
       ]
     }
   }
 }
 ```
 
-**Changes**:
-- `127.0.0.1` → `5.78.159.29`
-- `default-api-key` → secure token (must match VPS `.env`)
+**Configuration Summary**:
+
+| Bridge Name | Server URL | API Token | Connects To |
+|-------------|------------|-----------|-------------|
+| math-vps | http://5.78.159.29:3001/sse | VPS_API_KEY | VPS math service |
+| santa-clara-vps | http://5.78.159.29:3002/sse | VPS_API_KEY | VPS santa-clara service |
+| youtube-transcript-vps | http://5.78.159.29:3003/sse | VPS_API_KEY | VPS youtube-transcript service |
+| youtube-to-mp3-local | http://127.0.0.1:3004/sse | LOCAL_API_KEY | Local youtube-to-mp3 service |
+| github-local | http://127.0.0.1:3005/sse | LOCAL_API_KEY | Local github service |
+
+**Key Points**:
+- Each bridge is a separate Universal Cloud Connector instance
+- VPS bridges use VPS IP and VPS_API_KEY
+- Local bridges use 127.0.0.1 and LOCAL_API_KEY
+- All run concurrently in Claude Desktop
 
 ---
 
 ## Migration Steps
 
-### Step 1: Update VPS Code
+### Phase A: VPS Deployment (3 Services)
+
+#### Step 1: Update VPS Code
 ```bash
 ssh root@5.78.159.29
 cd ~/mcp-dev-environment
 git pull origin main
 ```
 
-### Step 2: Configure VPS Environment
+#### Step 2: Configure VPS Environment
 ```bash
-# Create .env file
-nano .env
-# Add configuration from section 3 above
+# Generate VPS API key
+openssl rand -hex 32
+# Save this as VPS_API_KEY
 
-# Create downloads directory
-sudo mkdir -p /data/downloads
-sudo chown -R $USER:$USER /data/downloads
+# Create .env file on VPS
+nano .env
 ```
 
-### Step 3: Update docker-compose.yml
+Add VPS configuration:
+```env
+MCP_ENV=production
+MCP_API_KEY=<paste-VPS_API_KEY-here>
+DOMAIN=5.78.159.29
+HTTP_PORT=80
+HTTPS_PORT=443
+```
+
+#### Step 3: Create VPS-only docker-compose.yml
+
+**On VPS**, create a docker-compose.yml with **ONLY the 3 VPS services**:
+
 ```bash
 nano docker-compose.yml
-# Change all port bindings from 127.0.0.1 to 0.0.0.0
 ```
 
-### Step 4: Configure VPS Firewall
+**VPS docker-compose.yml** (only math, santa-clara, youtube-transcript):
+```yaml
+version: '3.8'
+
+services:
+  math:
+    build: ./servers/math-mcp
+    container_name: mcp-math
+    ports:
+      - "0.0.0.0:3001:3000"  # VPS: bind to all interfaces
+    environment:
+      - PORT=3000
+      - MCP_API_KEY=${MCP_API_KEY}
+    restart: unless-stopped
+
+  santa-clara:
+    build: ./servers/santa-clara
+    container_name: mcp-santa-clara
+    ports:
+      - "0.0.0.0:3002:3000"  # VPS: bind to all interfaces
+    environment:
+      - PORT=3000
+      - MCP_API_KEY=${MCP_API_KEY}
+    restart: unless-stopped
+
+  youtube-transcript:
+    build: ./servers/youtube-transcript-mcp
+    container_name: mcp-youtube-transcript
+    ports:
+      - "0.0.0.0:3003:3000"  # VPS: bind to all interfaces
+    environment:
+      - PORT=3000
+      - MCP_API_KEY=${MCP_API_KEY}
+    restart: unless-stopped
+```
+
+#### Step 4: Configure VPS Firewall (3 ports only)
 ```bash
-# Allow MCP server ports
+# Allow ONLY the 3 VPS service ports
 sudo ufw allow 3001/tcp comment 'MCP math'
 sudo ufw allow 3002/tcp comment 'MCP santa-clara'
 sudo ufw allow 3003/tcp comment 'MCP youtube-transcript'
-
-# Optional: for all 5 servers
-sudo ufw allow 3004/tcp comment 'MCP youtube-to-mp3'
-sudo ufw allow 3005/tcp comment 'MCP github'
 
 # Enable and check
 sudo ufw enable
 sudo ufw status
 ```
 
-### Step 5: Build and Start Services
+#### Step 5: Build and Start VPS Services (3 services)
 ```bash
+# Build only the 3 VPS services
 docker-compose build
+
+# Start services
 docker-compose up -d
+
+# Check status
 docker-compose ps
 
-# Check health
+# Check health (3 services)
 for port in 3001 3002 3003; do
   echo "Port $port:"
   curl -s http://localhost:$port/health
 done
 ```
 
-### Step 6: Test from VPS
+### Phase B: Local Services Configuration (2 Services)
+
+#### Step 6: Configure Local Environment
+
+**On local WSL** (`/home/jcornell/mcp-dev-environment`):
+
 ```bash
-# Test SSE connection
-curl -H "Authorization: Bearer your-token" http://localhost:3001/sse
-# Should see: event: endpoint, data: /messages?session_id=...
+# Generate LOCAL API key
+openssl rand -hex 32
+# Save this as LOCAL_API_KEY
+
+# Create/update .env file
+nano .env
 ```
 
-### Step 7: Update Local Bridge Config
+Add local configuration:
+```env
+MCP_ENV=development
+MCP_API_KEY=<paste-LOCAL_API_KEY-here>
+DOWNLOADS_DIR=/home/jcornell/downloads
+GITHUB_PERSONAL_ACCESS_TOKEN=<your-existing-github-token>
+```
+
+#### Step 7: Create Local-only docker-compose.yml
+
+**On local WSL**, update docker-compose.yml with **ONLY the 2 local services**:
+
 ```bash
-# On Windows WSL
+cd /home/jcornell/mcp-dev-environment
+nano docker-compose.yml
+```
+
+**Local docker-compose.yml** (only youtube-to-mp3, github):
+```yaml
+version: '3.8'
+
+services:
+  youtube-to-mp3:
+    build: ./servers/youtube-to-mp3-mcp
+    container_name: mcp-youtube-to-mp3
+    ports:
+      - "127.0.0.1:3004:3000"  # Local: localhost only
+    environment:
+      - PORT=3000
+      - MCP_API_KEY=${MCP_API_KEY}
+      - DOWNLOADS_DIR=${DOWNLOADS_DIR}
+    volumes:
+      - ${DOWNLOADS_DIR}:/downloads
+    restart: unless-stopped
+
+  github-mcp:
+    build: ./servers/shared/github-mcp-http-wrapper
+    container_name: mcp-github
+    ports:
+      - "127.0.0.1:3005:3000"  # Local: localhost only
+    environment:
+      - PORT=3000
+      - MCP_API_KEY=${MCP_API_KEY}
+      - GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN}
+    restart: unless-stopped
+```
+
+#### Step 8: Restart Local Services (2 services)
+```bash
+# Rebuild and restart local services
+docker-compose build
+docker-compose down
+docker-compose up -d
+
+# Check health (2 services)
+for port in 3004 3005; do
+  echo "Port $port:"
+  curl -s http://localhost:$port/health
+done
+```
+
+### Phase C: Testing and Validation
+
+#### Step 9: Test VPS Services from VPS
+
+**On VPS**, test the 3 remote services:
+
+```bash
+# Test SSE connections from VPS
+for port in 3001 3002 3003; do
+  echo "Testing port $port:"
+  curl -H "Authorization: Bearer <VPS_API_KEY>" http://localhost:$port/sse
+  echo ""
+done
+# Each should return: event: endpoint, data: /messages?session_id=...
+```
+
+#### Step 10: Update Claude Desktop Config
+
+**On Windows**, backup and update Claude Desktop config:
+
+```bash
+# Via WSL
 cd /mnt/c/Users/jcorn/AppData/Roaming/Claude
 cp claude_desktop_config.json claude_desktop_config.json.backup
-nano claude_desktop_config.json
-# Update server_url and api_token
 ```
 
-### Step 8: Test Bridge from Local
+Update `claude_desktop_config.json` with the dual bridge configuration from Section 4 above.
+
+**Replace placeholders**:
+- `<VPS_API_KEY>` → Your generated VPS API key
+- `<LOCAL_API_KEY>` → Your generated LOCAL API key
+
+#### Step 11: Test Bridges from Local WSL
+
+**Test VPS bridges**:
 ```bash
-# On local WSL
 cd /home/jcornell/universal-cloud-connector
 
+# Test math VPS bridge
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | \
   server_url="http://5.78.159.29:3001/sse" \
-  api_token="your-token" \
+  api_token="<VPS_API_KEY>" \
+  node dist/index.js
+
+# Test santa-clara VPS bridge
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | \
+  server_url="http://5.78.159.29:3002/sse" \
+  api_token="<VPS_API_KEY>" \
   node dist/index.js
 ```
 
-### Step 9: Restart Claude Desktop
-1. Close Claude Desktop completely
-2. Reopen
-3. Create new chat
-4. Test: "What is 42 factorial?"
+**Test local bridges**:
+```bash
+# Test youtube-to-mp3 local bridge
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | \
+  server_url="http://127.0.0.1:3004/sse" \
+  api_token="<LOCAL_API_KEY>" \
+  node dist/index.js
 
-### Step 10: Verify All Services
-- Math: "What is 123 + 456?"
+# Test github local bridge
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | \
+  server_url="http://127.0.0.1:3005/sse" \
+  api_token="<LOCAL_API_KEY>" \
+  node dist/index.js
+```
+
+#### Step 12: Restart Claude Desktop and Verify
+
+1. **Close Claude Desktop completely**
+2. **Reopen Claude Desktop**
+3. **Create new chat**
+4. **Test each service**:
+
+**VPS Services**:
+- Math: "What is 42 factorial?"
 - Santa Clara: "Look up property 288-13-033"
-- YouTube: "Get transcript of <url>"
+- YouTube Transcript: "Get transcript of https://youtube.com/watch?v=dQw4w9WgXcQ"
+
+**Local Services**:
+- YouTube to MP3: "Convert https://youtube.com/watch?v=... to MP3"
+- GitHub: "Search for Python repos with 50k+ stars"
+
+#### Step 13: Verify Hybrid Deployment
+
+**Expected behavior**:
+- ✅ VPS services respond from 5.78.159.29
+- ✅ Local services respond from localhost
+- ✅ All 5 services available in Claude Desktop
+- ✅ No errors in Claude Desktop logs (Help → Export Logs)
 
 ---
 
@@ -265,170 +554,296 @@ ports:
 ```
 Binds to all interfaces - **required** for remote access from your Windows machine.
 
-### Security Layers
+### Security Layers (VPS Only)
 
 **1. Firewall (ufw)**
-- Only ports 80, 443 exposed to internet
-- Ports 3001-3005 accessible only from your IP (optional restriction)
+- **VPS**: Only ports 3001-3003 exposed (for MCP services)
+- Optional: Restrict ports 3001-3003 to your IP only
+- **Local**: No firewall changes needed (localhost-only binding)
 
 **2. Bearer Token Authentication**
+- **VPS services**: Use VPS_API_KEY (32-byte hex)
+- **Local services**: Use LOCAL_API_KEY (32-byte hex)
 - All requests require `Authorization: Bearer <token>` header
-- Strong tokens (32-byte hex = 64 characters)
 - Tokens never logged or stored in databases
 
-**3. HTTPS with Caddy (Immediate)**
+**3. HTTPS with Caddy (Optional)**
+- Can be added later for VPS services
 - Automatic Let's Encrypt certificates
 - HTTPS encryption for all traffic
-- HTTP automatically redirects to HTTPS
+- Not required for initial deployment (Bearer auth sufficient)
 
-**4. Optional: Basic Auth in Caddy**
-- Additional authentication layer at reverse proxy
-- Username/password before reaching MCP servers
+**4. Network Isolation**
+- **VPS**: Services bind to `0.0.0.0` (required for remote access)
+- **Local**: Services bind to `127.0.0.1` (localhost-only, no external access)
+- Different API keys for VPS vs local prevent unauthorized cross-access
 
 ### VPS Security Checklist
 
 Before going live, verify:
 
-- [ ] Firewall configured (`sudo ufw status`)
-- [ ] Only ports 80, 443 exposed to internet
-- [ ] Ports 3001-3005 **NOT** directly accessible from internet
-- [ ] HTTPS enabled with Let's Encrypt (Caddy handles this)
-- [ ] Strong API tokens generated (not `default-api-key`)
-- [ ] `.env` file has restrictive permissions (`chmod 600 .env`)
-- [ ] Regular security updates scheduled (`apt update && apt upgrade`)
-- [ ] No sensitive data in git repositories
+- [ ] Firewall configured on VPS (`sudo ufw status`)
+- [ ] Only ports 3001-3003 exposed on VPS (not 3004-3005)
+- [ ] Strong VPS_API_KEY generated (not `default-api-key`)
+- [ ] Strong LOCAL_API_KEY generated (different from VPS key)
+- [ ] VPS `.env` file has restrictive permissions (`chmod 600 .env`)
+- [ ] Local `.env` file has restrictive permissions (`chmod 600 .env`)
+- [ ] No GitHub token in VPS `.env` (only in local `.env`)
+- [ ] No `DOWNLOADS_DIR` in VPS `.env` (only in local `.env`)
+- [ ] Regular security updates scheduled on VPS (`apt update && apt upgrade`)
 - [ ] Docker socket access restricted (only sudoers)
 
-### Network Diagram with Security
+### Hybrid Network Diagram
 
 ```
 Internet
     ↓
-Firewall (ufw) - ports 80, 443 only
+Firewall (ufw) - VPS only allows 3001-3003
     ↓
-Caddy Reverse Proxy
-  ├─ HTTPS/TLS (Let's Encrypt)
-  ├─ Optional: Basic Auth
-  ├─ Rate limiting (optional)
-  └─ Request logging
+VPS Docker Network (5.78.159.29)
+  ├─ math-mcp:3001 (0.0.0.0:3001, Bearer: VPS_API_KEY)
+  ├─ santa-clara-mcp:3002 (0.0.0.0:3002, Bearer: VPS_API_KEY)
+  └─ youtube-transcript-mcp:3003 (0.0.0.0:3003, Bearer: VPS_API_KEY)
+
+Local WSL Docker Network (127.0.0.1)
+  ├─ youtube-to-mp3-mcp:3004 (127.0.0.1:3004, Bearer: LOCAL_API_KEY)
+  └─ github-mcp:3005 (127.0.0.1:3005, Bearer: LOCAL_API_KEY)
+
+Claude Desktop (Windows)
     ↓
-Docker Internal Network
-  ├─ math-mcp:3001 (Bearer token auth)
-  ├─ santa-clara-mcp:3002 (Bearer token auth)
-  └─ youtube-transcript-mcp:3003 (Bearer token auth)
+Universal Cloud Connector Bridges (WSL)
+  ├─ 3 VPS bridges → 5.78.159.29:3001-3003 (with VPS_API_KEY)
+  └─ 2 Local bridges → 127.0.0.1:3004-3005 (with LOCAL_API_KEY)
 ```
 
-Ports 3001-3005 are bound to `0.0.0.0` but **protected by**:
-1. Firewall blocks direct access
-2. Only accessible via Caddy reverse proxy
-3. Caddy enforces HTTPS
-4. Servers enforce Bearer token auth
+**Security Properties**:
+- VPS services accessible from internet (firewall + bearer auth protection)
+- Local services only accessible from same machine (localhost binding)
+- Different API keys prevent unauthorized cross-access
+- No sensitive data (GitHub token, downloads) leaves local machine
 
 ---
 
 ## Rollback Plan
 
-```bash
-# Restore local configuration
-cd /mnt/c/Users/jcorn/AppData/Roaming/Claude
-cp claude_desktop_config.json.backup claude_desktop_config.json
+### Rollback VPS Services (Return to All-Local)
 
-# Restart Claude Desktop
+If you need to rollback and run all 5 services locally again:
+
+**Step 1: Restore Local docker-compose.yml**
+
+Add back the 3 VPS services to local docker-compose.yml:
+
+```bash
+cd /home/jcornell/mcp-dev-environment
 ```
 
-VPS services remain independent - no impact on local setup.
+Update `docker-compose.yml` to include all 5 services with localhost binding:
+```yaml
+services:
+  math:
+    ports:
+      - "127.0.0.1:3001:3000"  # Localhost only
+
+  santa-clara:
+    ports:
+      - "127.0.0.1:3002:3000"  # Localhost only
+
+  youtube-transcript:
+    ports:
+      - "127.0.0.1:3003:3000"  # Localhost only
+
+  youtube-to-mp3:
+    ports:
+      - "127.0.0.1:3004:3000"  # Localhost only
+
+  github-mcp:
+    ports:
+      - "127.0.0.1:3005:3000"  # Localhost only
+```
+
+**Step 2: Restart Local Services**
+
+```bash
+docker-compose build
+docker-compose up -d
+```
+
+**Step 3: Restore Claude Desktop Config**
+
+```bash
+cd /mnt/c/Users/jcorn/AppData/Roaming/Claude
+cp claude_desktop_config.json.backup claude_desktop_config.json
+```
+
+**Step 4: Restart Claude Desktop**
+
+All services now running locally again. VPS services can remain running independently.
 
 ---
 
 ## Troubleshooting
 
-### Connection Refused
+### VPS Service Issues
+
+**Connection Refused to VPS**
 - Check VPS firewall: `sudo ufw status`
-- Check container: `docker-compose ps`
-- Check logs: `docker-compose logs math`
+- Verify ports 3001-3003 allowed
+- Check container on VPS: `docker-compose ps`
+- Check logs on VPS: `docker-compose logs math`
 
-### Invalid API Key (403)
-- Verify tokens match: VPS `.env` vs local bridge config
-- Regenerate and update both locations
+**Invalid API Key (403) - VPS Services**
+- Verify VPS_API_KEY matches in:
+  1. VPS `.env` file
+  2. Claude Desktop config VPS bridge `api_token`
+- Regenerate VPS_API_KEY and update both locations
 
-### SSE Timeout
+**SSE Timeout - VPS**
 - Test connectivity: `ping 5.78.159.29`
 - Test port: `telnet 5.78.159.29 3001`
 - Test health: `curl http://5.78.159.29:3001/health`
+- Check VPS firewall isn't blocking your IP
+
+### Local Service Issues
+
+**Connection Refused to Local**
+- Check containers running: `docker-compose ps`
+- Check logs: `docker-compose logs github-mcp`
+- Verify ports 3004-3005 not blocked locally
+
+**Invalid API Key (403) - Local Services**
+- Verify LOCAL_API_KEY matches in:
+  1. Local `.env` file
+  2. Claude Desktop config local bridge `api_token`
+- Regenerate LOCAL_API_KEY and update both locations
+
+**GitHub MCP "No Token" Error**
+- Verify `GITHUB_PERSONAL_ACCESS_TOKEN` in local `.env`
+- Check token hasn't expired
+- Rebuild github-mcp container after adding token
+
+### Claude Desktop Issues
+
+**Tools Not Appearing**
+- Verify all 5 bridge configs in `claude_desktop_config.json`
+- Completely close and restart Claude Desktop
+- Create new chat session
+- Check Claude Desktop logs (Help → Export Logs)
+
+**Mixed VPS/Local Not Working**
+- Ensure VPS bridges use VPS_API_KEY
+- Ensure local bridges use LOCAL_API_KEY
+- Verify VPS services use port 3001-3003
+- Verify local services use port 3004-3005
 
 ---
 
 ## Success Criteria
 
-- [ ] All containers running on VPS
-- [ ] Health endpoints respond from VPS IP
-- [ ] Local bridge connects to VPS
-- [ ] Claude Desktop tools work
-- [ ] No errors in logs
+**VPS Services** (3 services):
+- [ ] Math, santa-clara, youtube-transcript running on VPS
+- [ ] Health endpoints respond from 5.78.159.29:3001-3003
+- [ ] VPS bridges connect successfully
+- [ ] VPS tools work in Claude Desktop
+
+**Local Services** (2 services):
+- [ ] Youtube-to-mp3, github running locally
+- [ ] Health endpoints respond from 127.0.0.1:3004-3005
+- [ ] Local bridges connect successfully
+- [ ] Local tools work in Claude Desktop
+
+**Overall**:
+- [ ] All 5 tools available in Claude Desktop
+- [ ] No errors in Claude Desktop logs
+- [ ] VPS and local services independent
 
 ---
 
 ## Files Modified
 
-### On VPS:
-1. `docker-compose.yml` - Port bindings
-2. `.env` - Environment variables
-3. Firewall rules via `ufw`
+### On VPS (5.78.159.29):
+1. `docker-compose.yml` - **Only 3 services** (math, santa-clara, youtube-transcript)
+2. `.env` - VPS environment with VPS_API_KEY
+3. Firewall rules - **Only ports 3001-3003** allowed
 
-### Locally:
-1. `claude_desktop_config.json` - Bridge URLs and tokens
+### On Local WSL (/home/jcornell/mcp-dev-environment):
+1. `docker-compose.yml` - **Only 2 services** (youtube-to-mp3, github)
+2. `.env` - Local environment with LOCAL_API_KEY and GitHub token
+
+### On Windows (Claude Desktop):
+1. `claude_desktop_config.json` - **5 bridge instances** (3 VPS + 2 local)
 
 ### No Code Changes:
 - Server code already VPS-ready ✓
 - Bridge code uses environment variables ✓
 - Health checks implemented ✓
+- Services are location-agnostic ✓
 
 ---
 
 ## Timeline Estimate
 
+**Phase A: VPS Deployment**
 - VPS Configuration: 15 minutes
-- Testing: 15 minutes
-- Local Config: 5 minutes
+- VPS Service Build: 10 minutes
+- VPS Testing: 10 minutes
+
+**Phase B: Local Reconfiguration**
+- Local docker-compose update: 5 minutes
+- Local Service Rebuild: 5 minutes
+- Local Testing: 5 minutes
+
+**Phase C: Integration**
+- Claude Desktop Config: 10 minutes
+- End-to-End Testing: 15 minutes
 - Verification: 10 minutes
 
-**Total**: ~45 minutes
+**Total**: ~85 minutes (1.5 hours)
 
 ---
 
-## Security Enhancements (Optional)
+## Deployment Summary
 
-### Add HTTPS with Caddy
+### What Moves to VPS
+✅ **3 Services**:
+- math-mcp (general computation, no local dependencies)
+- santa-clara-mcp (static property data, no local dependencies)
+- youtube-transcript-mcp (API-based, no local dependencies)
+
+### What Stays Local
+✅ **2 Services**:
+- youtube-to-mp3-mcp (requires local file system for downloads)
+- github-mcp (uses local GitHub token, security preference)
+
+### Why Hybrid Makes Sense
+- **Performance**: Stateless services on VPS, file-heavy services local
+- **Security**: GitHub token never leaves local machine
+- **Flexibility**: Local downloads directory under your control
+- **Scalability**: Can move more services to VPS later if needed
+- **Cost**: Only pay for VPS resources you need
+
+---
+
+## Future Enhancements (Post-Migration)
+
+### Add HTTPS with Caddy (VPS)
 ```bash
-# Configure DNS first, then:
+# After DNS configured to point to 5.78.159.29
 docker-compose up -d caddy
 # Caddy auto-handles Let's Encrypt
 ```
 
-### Restrict CORS
-Update server files to allow only specific IPs instead of `*`
+### Move More Services to VPS
+If you later want to move youtube-to-mp3 or github to VPS:
+1. Add services to VPS docker-compose.yml
+2. Update VPS .env with needed variables
+3. Update Claude Desktop config to point to VPS
+4. Remove from local docker-compose.yml
 
-### Add Rate Limiting
-Configure in Caddy or nginx reverse proxy
-
----
-
-## Additional Notes
-
-### Why This is Simple
-- Architecture designed for HTTP/SSE transport
-- No hardcoded IPs in code
-- Bridge is transport-agnostic
-- Servers already bind to 0.0.0.0
-
-### Phased Migration
-You can migrate servers one at a time:
-1. Start with math (3001)
-2. Then santa-clara (3002)
-3. Then youtube-transcript (3003)
-4. Later: youtube-to-mp3 (3004), github (3005)
-
-Each server is independent - no dependencies.
+### Add Monitoring (VPS)
+- Prometheus + Grafana for metrics
+- Uptime monitoring
+- Log aggregation
 
 ---
 
