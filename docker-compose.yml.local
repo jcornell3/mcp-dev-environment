@@ -1,4 +1,14 @@
 services:
+  youtube-transcript:
+    build: ./servers/youtube-transcript
+    container_name: mcp-youtube-transcript
+    ports:
+      - "127.0.0.1:3003:3000"
+    environment:
+      - PORT=3000
+      - MCP_API_KEY=${MCP_API_KEY:-default-api-key}
+    restart: unless-stopped
+
   youtube-to-mp3:
     build: ./servers/youtube-to-mp3
     container_name: mcp-youtube-to-mp3

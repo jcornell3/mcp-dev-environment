@@ -1,25 +1,27 @@
-# VPS Migration Plan: Hybrid Deployment (3 VPS + 2 Local)
+# VPS Migration Plan: Hybrid Deployment (2 VPS + 3 Local)
 
-**Date**: December 6, 2025
+**Date**: December 6, 2025 (Updated: December 7, 2025)
 **Target VPS**: 5.78.159.29
 **Deployment Model**: Hybrid - Split between VPS and local
 
 **VPS Services** (Remote):
 - math-mcp (port 3001)
 - santa-clara-mcp (port 3002)
-- youtube-transcript-mcp (port 3003)
 
 **Local Services** (Stay on WSL):
-- youtube-to-mp3-mcp (port 3004) - Requires local file system access
+- youtube-transcript-mcp (port 3003) - **Moved back** due to YouTube IP blocking
+- youtube-to-mp3-mcp (port 3004) - Requires local file system access + Google Drive credentials
 - github-mcp (port 3005) - Uses local GitHub token
+
+**Note**: YouTube blocks requests from datacenter/cloud IPs, so youtube-transcript must run locally.
 
 ---
 
 ## Executive Summary
 
-This is a **hybrid deployment** where 3 production services move to VPS while 2 remain local. Claude Desktop will use **two separate Universal Cloud Connector instances**:
-1. **VPS Bridge** - Connects to remote services (math, santa-clara, youtube-transcript)
-2. **Local Bridge** - Connects to local services (youtube-to-mp3, github)
+This is a **hybrid deployment** where 2 production services move to VPS while 3 remain local. Claude Desktop will use **two separate Universal Cloud Connector instances**:
+1. **VPS Bridge** - Connects to remote services (math, santa-clara)
+2. **Local Bridge** - Connects to local services (youtube-transcript, youtube-to-mp3, github)
 
 **Only configuration files need updating** - no code changes required.
 
@@ -49,21 +51,22 @@ Claude Desktop (Windows)
     │   ↓ HTTP/SSE over Internet
     │   VPS Docker Containers (5.78.159.29)
     │       ├── math-mcp (0.0.0.0:3001)
-    │       ├── santa-clara-mcp (0.0.0.0:3002)
-    │       └── youtube-transcript-mcp (0.0.0.0:3003)
+    │       └── santa-clara-mcp (0.0.0.0:3002)
     │
     └─ Local Bridge Instance (for local services)
         ↓ HTTP/SSE localhost
         Local Docker Containers (WSL)
+            ├── youtube-transcript-mcp (127.0.0.1:3003)
             ├── youtube-to-mp3-mcp (127.0.0.1:3004)
             └── github-mcp (127.0.0.1:3005)
 ```
 
 **Key Architecture Decision**:
 - **Two Universal Cloud Connector instances** in Claude Desktop config
-- **VPS Bridge** connects to remote services (math, santa-clara, youtube-transcript)
-- **Local Bridge** connects to local services (youtube-to-mp3, github)
+- **VPS Bridge** connects to remote services (math, santa-clara)
+- **Local Bridge** connects to local services (youtube-transcript, youtube-to-mp3, github)
 - Each bridge instance is independent with its own server_url
+- **YouTube transcript runs locally** due to YouTube blocking datacenter IPs
 
 ---
 
@@ -101,9 +104,9 @@ ports:
 **VPS Services to update**:
 - math (port 3001) → `0.0.0.0:3001:3000`
 - santa-clara (port 3002) → `0.0.0.0:3002:3000`
-- youtube-transcript (port 3003) → `0.0.0.0:3003:3000`
 
 **Remove from VPS docker-compose.yml**:
+- youtube-transcript service (stays local - YouTube IP blocking)
 - youtube-to-mp3 service (stays local)
 - github-mcp service (stays local)
 
@@ -114,6 +117,10 @@ ports:
 **Keep localhost binding** (no changes):
 ```yaml
 # Local services stay on 127.0.0.1
+youtube-transcript:
+  ports:
+    - "127.0.0.1:3003:3000"
+
 youtube-to-mp3:
   ports:
     - "127.0.0.1:3004:3000"
@@ -126,7 +133,6 @@ github-mcp:
 **Remove from local docker-compose.yml after migration**:
 - math service (moved to VPS)
 - santa-clara service (moved to VPS)
-- youtube-transcript service (moved to VPS)
 
 ### 3. Environment Variables & API Tokens
 
@@ -134,10 +140,10 @@ github-mcp:
 
 **Generate secure API tokens** (run these commands):
 ```bash
-# Generate VPS_API_KEY (for VPS services: math, santa-clara, youtube-transcript)
+# Generate VPS_API_KEY (for VPS services: math, santa-clara)
 openssl rand -hex 32
 
-# Generate LOCAL_API_KEY (for local services: youtube-to-mp3, github)
+# Generate LOCAL_API_KEY (for local services: youtube-transcript, youtube-to-mp3, github)
 openssl rand -hex 32
 
 # Save both tokens - you'll need them in Claude Desktop config
@@ -186,7 +192,7 @@ GITHUB_PERSONAL_ACCESS_TOKEN=<your-existing-github-token>
 |---------|----------|---------|---------|
 | math-mcp | VPS | VPS_API_KEY | VPS bridge config |
 | santa-clara-mcp | VPS | VPS_API_KEY | VPS bridge config |
-| youtube-transcript-mcp | VPS | VPS_API_KEY | VPS bridge config |
+| youtube-transcript-mcp | Local | LOCAL_API_KEY | Local bridge config |
 | youtube-to-mp3-mcp | Local | LOCAL_API_KEY | Local bridge config |
 | github-mcp | Local | LOCAL_API_KEY | Local bridge config |
 
@@ -217,15 +223,15 @@ This config requires **TWO sets of bridges** - one pointing to VPS, one pointing
       ]
     },
 
-    "youtube-transcript-vps": {
+    "// LOCAL BRIDGES - Local Services": "",
+
+    "youtube-transcript-local": {
       "command": "wsl",
       "args": [
         "bash", "-c",
-        "cd /home/jcornell/universal-cloud-connector && export server_url='http://5.78.159.29:3003/sse' && export api_token='<VPS_API_KEY>' && /home/jcornell/.nvm/versions/node/v24.11.1/bin/node dist/index.js"
+        "cd /home/jcornell/universal-cloud-connector && export server_url='http://127.0.0.1:3003/sse' && export api_token='<LOCAL_API_KEY>' && /home/jcornell/.nvm/versions/node/v24.11.1/bin/node dist/index.js"
       ]
     },
-
-    "// LOCAL BRIDGES - Local Services": "",
 
     "youtube-to-mp3-local": {
       "command": "wsl",
@@ -252,7 +258,7 @@ This config requires **TWO sets of bridges** - one pointing to VPS, one pointing
 |-------------|------------|-----------|-------------|
 | math-vps | http://5.78.159.29:3001/sse | VPS_API_KEY | VPS math service |
 | santa-clara-vps | http://5.78.159.29:3002/sse | VPS_API_KEY | VPS santa-clara service |
-| youtube-transcript-vps | http://5.78.159.29:3003/sse | VPS_API_KEY | VPS youtube-transcript service |
+| youtube-transcript-local | http://127.0.0.1:3003/sse | LOCAL_API_KEY | Local youtube-transcript service |
 | youtube-to-mp3-local | http://127.0.0.1:3004/sse | LOCAL_API_KEY | Local youtube-to-mp3 service |
 | github-local | http://127.0.0.1:3005/sse | LOCAL_API_KEY | Local github service |
 
@@ -266,7 +272,7 @@ This config requires **TWO sets of bridges** - one pointing to VPS, one pointing
 
 ## Migration Steps
 
-### Phase A: VPS Deployment (3 Services)
+### Phase A: VPS Deployment (2 Services)
 
 #### Step 1: Update VPS Code
 ```bash
@@ -296,13 +302,13 @@ HTTPS_PORT=443
 
 #### Step 3: Create VPS-only docker-compose.yml
 
-**On VPS**, create a docker-compose.yml with **ONLY the 3 VPS services**:
+**On VPS**, create a docker-compose.yml with **ONLY the 2 VPS services**:
 
 ```bash
 nano docker-compose.yml
 ```
 
-**VPS docker-compose.yml** (only math, santa-clara, youtube-transcript):
+**VPS docker-compose.yml** (only math, santa-clara):
 ```yaml
 version: '3.8'
 
@@ -326,33 +332,22 @@ services:
       - PORT=3000
       - MCP_API_KEY=${MCP_API_KEY}
     restart: unless-stopped
-
-  youtube-transcript:
-    build: ./servers/youtube-transcript-mcp
-    container_name: mcp-youtube-transcript
-    ports:
-      - "0.0.0.0:3003:3000"  # VPS: bind to all interfaces
-    environment:
-      - PORT=3000
-      - MCP_API_KEY=${MCP_API_KEY}
-    restart: unless-stopped
 ```
 
-#### Step 4: Configure VPS Firewall (3 ports only)
+#### Step 4: Configure VPS Firewall (2 ports only)
 ```bash
-# Allow ONLY the 3 VPS service ports
+# Allow ONLY the 2 VPS service ports
 sudo ufw allow 3001/tcp comment 'MCP math'
 sudo ufw allow 3002/tcp comment 'MCP santa-clara'
-sudo ufw allow 3003/tcp comment 'MCP youtube-transcript'
 
 # Enable and check
 sudo ufw enable
 sudo ufw status
 ```
 
-#### Step 5: Build and Start VPS Services (3 services)
+#### Step 5: Build and Start VPS Services (2 services)
 ```bash
-# Build only the 3 VPS services
+# Build only the 2 VPS services
 docker-compose build
 
 # Start services
@@ -361,14 +356,14 @@ docker-compose up -d
 # Check status
 docker-compose ps
 
-# Check health (3 services)
-for port in 3001 3002 3003; do
+# Check health (2 services)
+for port in 3001 3002; do
   echo "Port $port:"
   curl -s http://localhost:$port/health
 done
 ```
 
-### Phase B: Local Services Configuration (2 Services)
+### Phase B: Local Services Configuration (3 Services)
 
 #### Step 6: Configure Local Environment
 
@@ -393,20 +388,30 @@ GITHUB_PERSONAL_ACCESS_TOKEN=<your-existing-github-token>
 
 #### Step 7: Create Local-only docker-compose.yml
 
-**On local WSL**, update docker-compose.yml with **ONLY the 2 local services**:
+**On local WSL**, update docker-compose.yml with **ONLY the 3 local services**:
 
 ```bash
 cd /home/jcornell/mcp-dev-environment
 nano docker-compose.yml
 ```
 
-**Local docker-compose.yml** (only youtube-to-mp3, github):
+**Local docker-compose.yml** (only youtube-transcript, youtube-to-mp3, github):
 ```yaml
 version: '3.8'
 
 services:
+  youtube-transcript:
+    build: ./servers/youtube-transcript
+    container_name: mcp-youtube-transcript
+    ports:
+      - "127.0.0.1:3003:3000"  # Local: localhost only
+    environment:
+      - PORT=3000
+      - MCP_API_KEY=${MCP_API_KEY}
+    restart: unless-stopped
+
   youtube-to-mp3:
-    build: ./servers/youtube-to-mp3-mcp
+    build: ./servers/youtube-to-mp3
     container_name: mcp-youtube-to-mp3
     ports:
       - "127.0.0.1:3004:3000"  # Local: localhost only
@@ -430,15 +435,15 @@ services:
     restart: unless-stopped
 ```
 
-#### Step 8: Restart Local Services (2 services)
+#### Step 8: Restart Local Services (3 services)
 ```bash
 # Rebuild and restart local services
 docker-compose build
 docker-compose down
 docker-compose up -d
 
-# Check health (2 services)
-for port in 3004 3005; do
+# Check health (3 services)
+for port in 3003 3004 3005; do
   echo "Port $port:"
   curl -s http://localhost:$port/health
 done
@@ -448,11 +453,11 @@ done
 
 #### Step 9: Test VPS Services from VPS
 
-**On VPS**, test the 3 remote services:
+**On VPS**, test the 2 remote services:
 
 ```bash
 # Test SSE connections from VPS
-for port in 3001 3002 3003; do
+for port in 3001 3002; do
   echo "Testing port $port:"
   curl -H "Authorization: Bearer <VPS_API_KEY>" http://localhost:$port/sse
   echo ""
@@ -497,6 +502,12 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | \
 
 **Test local bridges**:
 ```bash
+# Test youtube-transcript local bridge
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | \
+  server_url="http://127.0.0.1:3003/sse" \
+  api_token="<LOCAL_API_KEY>" \
+  node dist/index.js
+
 # Test youtube-to-mp3 local bridge
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | \
   server_url="http://127.0.0.1:3004/sse" \
@@ -520,9 +531,9 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | \
 **VPS Services**:
 - Math: "What is 42 factorial?"
 - Santa Clara: "Look up property 288-13-033"
-- YouTube Transcript: "Get transcript of https://youtube.com/watch?v=dQw4w9WgXcQ"
 
 **Local Services**:
+- YouTube Transcript: "Get transcript of https://youtube.com/watch?v=dQw4w9WgXcQ"
 - YouTube to MP3: "Convert https://youtube.com/watch?v=... to MP3"
 - GitHub: "Search for Python repos with 50k+ stars"
 
@@ -557,8 +568,8 @@ Binds to all interfaces - **required** for remote access from your Windows machi
 ### Security Layers (VPS Only)
 
 **1. Firewall (ufw)**
-- **VPS**: Only ports 3001-3003 exposed (for MCP services)
-- Optional: Restrict ports 3001-3003 to your IP only
+- **VPS**: Only ports 3001-3002 exposed (for MCP services)
+- Optional: Restrict ports 3001-3002 to your IP only
 - **Local**: No firewall changes needed (localhost-only binding)
 
 **2. Bearer Token Authentication**
@@ -583,7 +594,7 @@ Binds to all interfaces - **required** for remote access from your Windows machi
 Before going live, verify:
 
 - [ ] Firewall configured on VPS (`sudo ufw status`)
-- [ ] Only ports 3001-3003 exposed on VPS (not 3004-3005)
+- [ ] Only ports 3001-3002 exposed on VPS (not 3003-3005)
 - [ ] Strong VPS_API_KEY generated (not `default-api-key`)
 - [ ] Strong LOCAL_API_KEY generated (different from VPS key)
 - [ ] VPS `.env` file has restrictive permissions (`chmod 600 .env`)
@@ -598,22 +609,22 @@ Before going live, verify:
 ```
 Internet
     ↓
-Firewall (ufw) - VPS only allows 3001-3003
+Firewall (ufw) - VPS only allows 3001-3002
     ↓
 VPS Docker Network (5.78.159.29)
   ├─ math-mcp:3001 (0.0.0.0:3001, Bearer: VPS_API_KEY)
-  ├─ santa-clara-mcp:3002 (0.0.0.0:3002, Bearer: VPS_API_KEY)
-  └─ youtube-transcript-mcp:3003 (0.0.0.0:3003, Bearer: VPS_API_KEY)
+  └─ santa-clara-mcp:3002 (0.0.0.0:3002, Bearer: VPS_API_KEY)
 
 Local WSL Docker Network (127.0.0.1)
+  ├─ youtube-transcript-mcp:3003 (127.0.0.1:3003, Bearer: LOCAL_API_KEY)
   ├─ youtube-to-mp3-mcp:3004 (127.0.0.1:3004, Bearer: LOCAL_API_KEY)
   └─ github-mcp:3005 (127.0.0.1:3005, Bearer: LOCAL_API_KEY)
 
 Claude Desktop (Windows)
     ↓
 Universal Cloud Connector Bridges (WSL)
-  ├─ 3 VPS bridges → 5.78.159.29:3001-3003 (with VPS_API_KEY)
-  └─ 2 Local bridges → 127.0.0.1:3004-3005 (with LOCAL_API_KEY)
+  ├─ 2 VPS bridges → 5.78.159.29:3001-3002 (with VPS_API_KEY)
+  └─ 3 Local bridges → 127.0.0.1:3003-3005 (with LOCAL_API_KEY)
 ```
 
 **Security Properties**:
@@ -651,7 +662,7 @@ services:
 
   youtube-transcript:
     ports:
-      - "127.0.0.1:3003:3000"  # Localhost only
+      - "127.0.0.1:3003:3000"  # Localhost only (YouTube IP blocking)
 
   youtube-to-mp3:
     ports:
@@ -740,15 +751,15 @@ All services now running locally again. VPS services can remain running independ
 
 ## Success Criteria
 
-**VPS Services** (3 services):
-- [ ] Math, santa-clara, youtube-transcript running on VPS
-- [ ] Health endpoints respond from 5.78.159.29:3001-3003
+**VPS Services** (2 services):
+- [ ] Math, santa-clara running on VPS
+- [ ] Health endpoints respond from 5.78.159.29:3001-3002
 - [ ] VPS bridges connect successfully
 - [ ] VPS tools work in Claude Desktop
 
-**Local Services** (2 services):
-- [ ] Youtube-to-mp3, github running locally
-- [ ] Health endpoints respond from 127.0.0.1:3004-3005
+**Local Services** (3 services):
+- [ ] Youtube-transcript, youtube-to-mp3, github running locally
+- [ ] Health endpoints respond from 127.0.0.1:3003-3005
 - [ ] Local bridges connect successfully
 - [ ] Local tools work in Claude Desktop
 
@@ -762,16 +773,16 @@ All services now running locally again. VPS services can remain running independ
 ## Files Modified
 
 ### On VPS (5.78.159.29):
-1. `docker-compose.yml` - **Only 3 services** (math, santa-clara, youtube-transcript)
+1. `docker-compose.yml` - **Only 2 services** (math, santa-clara)
 2. `.env` - VPS environment with VPS_API_KEY
-3. Firewall rules - **Only ports 3001-3003** allowed
+3. Firewall rules - **Only ports 3001-3002** allowed
 
 ### On Local WSL (/home/jcornell/mcp-dev-environment):
-1. `docker-compose.yml` - **Only 2 services** (youtube-to-mp3, github)
+1. `docker-compose.yml` - **Only 3 services** (youtube-transcript, youtube-to-mp3, github)
 2. `.env` - Local environment with LOCAL_API_KEY and GitHub token
 
 ### On Windows (Claude Desktop):
-1. `claude_desktop_config.json` - **5 bridge instances** (3 VPS + 2 local)
+1. `claude_desktop_config.json` - **5 bridge instances** (2 VPS + 3 local)
 
 ### No Code Changes:
 - Server code already VPS-ready ✓
@@ -805,13 +816,13 @@ All services now running locally again. VPS services can remain running independ
 ## Deployment Summary
 
 ### What Moves to VPS
-✅ **3 Services**:
+✅ **2 Services**:
 - math-mcp (general computation, no local dependencies)
 - santa-clara-mcp (static property data, no local dependencies)
-- youtube-transcript-mcp (API-based, no local dependencies)
 
 ### What Stays Local
-✅ **2 Services**:
+✅ **3 Services**:
+- youtube-transcript-mcp (YouTube blocks datacenter IPs - must run locally)
 - youtube-to-mp3-mcp (requires local file system for downloads)
 - github-mcp (uses local GitHub token, security preference)
 
@@ -819,7 +830,8 @@ All services now running locally again. VPS services can remain running independ
 - **Performance**: Stateless services on VPS, file-heavy services local
 - **Security**: GitHub token never leaves local machine
 - **Flexibility**: Local downloads directory under your control
-- **Scalability**: Can move more services to VPS later if needed
+- **YouTube Requirement**: YouTube's bot detection blocks datacenter IPs, forcing youtube-transcript to run locally
+- **Scalability**: Can move more services to VPS later if needed (except youtube-transcript)
 - **Cost**: Only pay for VPS resources you need
 
 ---

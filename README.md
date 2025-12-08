@@ -1,9 +1,14 @@
 # MCP Development Environment
 
 **Status**: Production Ready ✅ (Personal/Small Team Use)
-**Last Updated**: December 6, 2025
+**Last Updated**: December 7, 2025
 
 A complete development environment for running multiple MCP (Model Context Protocol) servers in Docker, bridged to Claude Desktop via the Universal Cloud Connector.
+
+**Deployment Options**:
+- **All-Local**: All 5 services run on local machine (default setup)
+- **Hybrid**: 2 services on VPS, 3 services local (see [VPS_MIGRATION_PLAN.md](docs/VPS_MIGRATION_PLAN.md))
+  - Note: youtube-transcript must run locally due to YouTube's datacenter IP blocking
 
 **Suitable for:**
 - Personal projects
